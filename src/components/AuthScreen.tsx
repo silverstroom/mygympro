@@ -58,6 +58,9 @@ export default function AuthScreen() {
       return;
     }
     if (res.migrated) toast("Dati del dispositivo importati nel tuo account");
+    try {
+      sessionStorage.setItem("mygympro-new-account", "1");
+    } catch {}
     enter();
   };
 

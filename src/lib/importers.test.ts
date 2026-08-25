@@ -115,6 +115,17 @@ function coachState(over: Partial<AppState>): Parameters<typeof nextStep>[0] {
     bodyweight: [],
     goalWeight: null,
     active: null,
+    settings: {
+      name: "",
+      unit: "kg",
+      restSec: 90,
+      sound: true,
+      wakeLock: true,
+      weighAsk: true,
+      height: 180,
+      birthYear: 1990,
+      sex: "m",
+    },
     ...over,
   };
 }
@@ -146,5 +157,25 @@ describe("coach", () => {
       workouts: [{ id: "w", d: todayISO(), name: "A", routineId: "r1", start: 1, end: 2, entries: [] }],
     });
     expect(nextStep(s).key).toBe("bw");
+  });
+
+  it("con profilo incompleto propone di completarlo", () => {
+    const s = coachState({
+      routines: [{ id: "r1", name: "A", icon: "barbell", exercises: [] }],
+      workouts: [{ id: "w", d: todayISO(), name: "A", routineId: "r1", start: 1, end: 2, entries: [] }],
+    });
+    s.settings = { ...s.settings, birthYear: null };
+    expect(nextStep(s).key).toBe("profile");
+    s.settings = { ...s.settings, birthYear: 1990, height: null };
+    expect(nextStep(s).key).toBe("profile");
+  });
+
+  it("agli ospiti non chiede il profilo", () => {
+    const s = coachState({
+      routines: [{ id: "r1", name: "A", icon: "barbell", exercises: [] }],
+      workouts: [{ id: "w", d: todayISO(), name: "A", routineId: "r1", start: 1, end: 2, entries: [] }],
+    });
+    s.settings = { ...s.settings, birthYear: null, height: null };
+    expect(nextStep(s, { guest: true }).key).toBe("bw");
   });
 });

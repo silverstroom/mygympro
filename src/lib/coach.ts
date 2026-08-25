@@ -7,13 +7,13 @@ export interface CoachStep {
   title: string;
   body: string;
   cta: string | null;
-  action: "piano" | "allenamento" | "peso" | "obiettivo" | "sposta" | "signup" | null;
+  action: "piano" | "allenamento" | "peso" | "obiettivo" | "sposta" | "signup" | "profilo" | null;
   tone: "accent" | "amber" | "quiet";
 }
 
 type CoachState = Pick<
   AppState,
-  "routines" | "week" | "overrides" | "workouts" | "bodyweight" | "goalWeight" | "active"
+  "routines" | "week" | "overrides" | "workouts" | "bodyweight" | "goalWeight" | "active" | "settings"
 >;
 
 export function nextStep(s: CoachState, opts?: { guest?: boolean }): CoachStep {
@@ -61,6 +61,22 @@ export function nextStep(s: CoachState, opts?: { guest?: boolean }): CoachStep {
       body: "Oggi sarebbe riposo, ma il primo workout puoi spostarlo a oggi con un tocco.",
       cta: "Scegli la scheda",
       action: "allenamento",
+      tone: "accent",
+    };
+  }
+
+  if (
+    !opts?.guest &&
+    (s.settings.birthYear == null ||
+      s.settings.height == null ||
+      s.settings.height < 120)
+  ) {
+    return {
+      key: "profile",
+      title: "Completa il tuo profilo",
+      body: "Età, altezza e peso: con questi tre dati taro su di te carichi, calorie e proteine, come farebbe un PT.",
+      cta: "Completa ora",
+      action: "profilo",
       tone: "accent",
     };
   }

@@ -70,6 +70,27 @@ describe("coach chat", () => {
     expect(a.text).toContain("176");
   });
 
+  it("calorie con profilo completo: stima il fabbisogno", () => {
+    const a = answer(
+      "quante calorie devo assumere?",
+      ctx({
+        bodyweight: [{ d: "2026-08-20", w: 80 }],
+        settings: {
+          name: "", unit: "kg", restSec: 90, sound: true, wakeLock: true, weighAsk: true,
+          height: 180, birthYear: 1990, sex: "m",
+        },
+      })
+    );
+    expect(a.text).toContain("kcal");
+    expect(a.text).toContain("metabolismo basale");
+  });
+
+  it("calorie senza profilo: invita a completarlo", () => {
+    const a = answer("che fabbisogno calorico ho?", ctx());
+    expect(a.text).toContain("completa il profilo");
+    expect(a.actions?.[0]).toMatchObject({ type: "href", href: "/impostazioni" });
+  });
+
   it("fallback con esempi", () => {
     expect(answer("qwertyasdf", ctx()).text).toContain("cosa mi alleno oggi");
   });

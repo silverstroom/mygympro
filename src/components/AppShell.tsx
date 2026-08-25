@@ -33,6 +33,7 @@ import RestTimer from "@/components/RestTimer";
 import AuthScreen from "@/components/AuthScreen";
 import { Toasts } from "@/components/ui";
 import SignupPrompt, { useSignup } from "@/components/SignupPrompt";
+import ProfileSetup, { useProfileSetup } from "@/components/ProfileSetup";
 import CoachChat from "@/components/CoachChat";
 import { applyTheme } from "@/lib/themes";
 
@@ -122,6 +123,17 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   }, [authed, viewer?.guest]);
 
   const guestBar = authed && !!viewer?.guest && !impersonator && !active?.restUntil;
+
+  useEffect(() => {
+    if (!authed || viewer?.guest || viewer?.demo || impersonator) return;
+    try {
+      if (sessionStorage.getItem("mygympro-new-account") === "1") {
+        sessionStorage.removeItem("mygympro-new-account");
+        const t = setTimeout(() => useProfileSetup.getState().show(), 700);
+        return () => clearTimeout(t);
+      }
+    } catch {}
+  }, [authed, viewer?.guest, viewer?.demo, impersonator]);
 
   useEffect(() => {
     document.documentElement.style.setProperty(
@@ -304,6 +316,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <RestTimer />
       <Toasts />
       <SignupPrompt />
+      {authed && <ProfileSetup />}
       {authed && <CoachChat />}
 
       {authed && (

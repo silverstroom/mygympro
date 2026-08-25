@@ -119,6 +119,9 @@ export interface Settings {
   trackRir?: boolean;
   goal?: string;
   level?: string;
+  sex?: "m" | "f" | null;
+  birthYear?: number | null;
+  profileAsked?: boolean;
 }
 
 export interface Activity {

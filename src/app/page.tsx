@@ -21,6 +21,7 @@ import {
   Sparkle,
   Target,
   Timer,
+  UserCircle,
 } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 import { addDays, DAY_FULL, fmtLong, fmtNum, fmtShort, mondayOf, todayISO, weekKeyOf, dayIdxOf } from "@/lib/dates";
@@ -36,6 +37,8 @@ import { ROUTINE_ICONS } from "@/components/routineIcons";
 import PlanWizard from "@/components/PlanWizard";
 import { nextStep } from "@/lib/coach";
 import { useSignup } from "@/components/SignupPrompt";
+import { useProfileSetup } from "@/components/ProfileSetup";
+import { ageFrom, bmr, goalCalories, tdee } from "@/lib/health";
 import { currentAccount } from "@/lib/auth";
 
 function Onboarding({ accName }: { accName: string }) {
@@ -79,6 +82,7 @@ function Onboarding({ accName }: { accName: string }) {
 }
 
 const COACH_ICONS: Record<string, React.ReactNode> = {
+  profile: <UserCircle size={20} weight="fill" />,
   signup: <Sparkle size={20} weight="fill" />,
   resume: <Timer size={20} weight="fill" />,
   plan: <CompassRose size={20} weight="fill" />,
@@ -108,13 +112,14 @@ function CoachCard({
   const bodyweight = useStore((s) => s.bodyweight);
   const goalWeight = useStore((s) => s.goalWeight);
   const active = useStore((s) => s.active);
+  const settings = useStore((s) => s.settings);
   const [guest, setGuest] = useState(false);
   useEffect(() => {
     setGuest(!!currentAccount()?.guest);
   }, []);
 
   const step = nextStep(
-    { routines, week, overrides, workouts, bodyweight, goalWeight, active },
+    { routines, week, overrides, workouts, bodyweight, goalWeight, active, settings },
     { guest }
   );
 
@@ -124,6 +129,7 @@ function CoachCard({
     else if (step.action === "peso") onPeso();
     else if (step.action === "obiettivo") onObiettivo();
     else if (step.action === "signup") useSignup.getState().show("coach");
+    else if (step.action === "profilo") useProfileSetup.getState().show();
   };
 
   const toneCls =
@@ -233,6 +239,7 @@ export default function Home() {
   const active = useStore((s) => s.active);
   const demo = useStore((s) => s.demo);
   const settingsHeight = useStore((s) => s.settings.height);
+  const settingsAll = useStore((s) => s.settings);
   const logBodyweight = useStore((s) => s.logBodyweight);
   const setGoal = useStore((s) => s.setGoal);
   const setOverride = useStore((s) => s.setOverride);
@@ -447,6 +454,27 @@ export default function Home() {
                     : `${fmtNum(Math.round((goalWeight - lastBW.w) * 10) / 10)} kg da mettere su`}
               </div>
             )}
+            {(() => {
+              const kcal = goalCalories(
+                tdee(
+                  bmr(
+                    settingsAll.sex ?? null,
+                    ageFrom(settingsAll.birthYear, new Date().getFullYear()),
+                    settingsHeight,
+                    lastBW.w
+                  ),
+                  week.filter(Boolean).length
+                ),
+                settingsAll.goal
+              );
+              return kcal != null ? (
+                <div className="mb-1 text-[12px] text-ink-3">
+                  Fabbisogno stimato ≈{" "}
+                  <span className="tnum font-semibold text-ink-2">{fmtNum(kcal)} kcal</span>
+                  /giorno per il tuo obiettivo
+                </div>
+              ) : null;
+            })()}
             <LineChart data={bwData} goal={goalWeight} unit="kg" h={140} />
           </>
         ) : (

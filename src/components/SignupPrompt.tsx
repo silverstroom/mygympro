@@ -147,6 +147,9 @@ export default function SignupPrompt() {
       toast(res.error, "warn");
       return;
     }
+    try {
+      sessionStorage.setItem("mygympro-new-account", "1");
+    } catch {}
     window.location.replace("/");
   };
 

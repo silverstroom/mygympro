@@ -4,9 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import {
+  Cake,
   Camera,
   CaretRight,
   DownloadSimple,
+  GenderIntersex,
   Key,
   Palette,
   Ruler,
@@ -29,6 +31,8 @@ import {
   setAvatar,
 } from "@/lib/auth";
 import { ACCENTS, BGS, DEFAULT_ACCENT, DEFAULT_BG } from "@/lib/themes";
+import { ageFrom, bmr, goalCalories, tdee } from "@/lib/health";
+import { fmtNum } from "@/lib/dates";
 import { createAppleParser, parseActivitiesCsv } from "@/lib/importers";
 import { useSignup } from "@/components/SignupPrompt";
 import PasswordInput from "@/components/PasswordInput";
@@ -98,6 +102,18 @@ export default function ImpostazioniPage() {
   const activities = useStore((s) => s.activities);
   const addActivities = useStore((s) => s.addActivities);
   const clearActivities = useStore((s) => s.clearActivities);
+  const bodyweight = useStore((s) => s.bodyweight);
+  const week = useStore((s) => s.week);
+
+  const thisYear = new Date().getFullYear();
+  const lastBw = bodyweight.length ? bodyweight[bodyweight.length - 1].w : null;
+  const profileKcal = goalCalories(
+    tdee(
+      bmr(settings.sex ?? null, ageFrom(settings.birthYear, thisYear), settings.height, lastBw),
+      week.filter(Boolean).length
+    ),
+    settings.goal
+  );
 
   useEffect(() => {
     setMe(currentAccount());
@@ -333,6 +349,61 @@ export default function ImpostazioniPage() {
             />
           </div>
         </div>
+        <div className="mt-3 flex items-center justify-between gap-3 border-t border-line pt-3">
+          <span className="flex items-center gap-2 text-[13.5px] font-semibold text-ink-2">
+            <Cake size={16} weight="bold" color="var(--text-3)" />
+            Età
+          </span>
+          <div className="w-[150px]">
+            <Stepper
+              value={ageFrom(settings.birthYear, thisYear) ?? 0}
+              onChange={(v) =>
+                setSettings({ birthYear: v >= 13 ? thisYear - v : null })
+              }
+              step={1}
+              min={0}
+              max={100}
+              suffix="anni"
+            />
+          </div>
+        </div>
+        <div className="mt-3 flex items-center justify-between gap-3 border-t border-line pt-3">
+          <span className="flex items-center gap-2 text-[13.5px] font-semibold text-ink-2">
+            <GenderIntersex size={16} weight="bold" color="var(--text-3)" />
+            Sesso (per il fabbisogno)
+          </span>
+          <div className="flex gap-1.5">
+            {(
+              [
+                { v: "m", l: "Uomo" },
+                { v: "f", l: "Donna" },
+                { v: null, l: "—" },
+              ] as const
+            ).map((o) => {
+              const on = (settings.sex ?? null) === o.v && settings.sex !== undefined;
+              return (
+                <button
+                  key={o.l}
+                  onClick={() => setSettings({ sex: o.v })}
+                  className={`press rounded-full border px-3 py-1.5 text-[12.5px] font-bold transition-colors ${
+                    on
+                      ? "border-accent bg-accent-soft text-accent"
+                      : "border-line bg-surface-2 text-ink-2"
+                  }`}
+                >
+                  {o.l}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        {profileKcal != null && (
+          <p className="mt-3 border-t border-line pt-3 text-[12.5px] leading-snug text-ink-3">
+            Fabbisogno stimato per il tuo obiettivo: ≈{" "}
+            <span className="tnum font-semibold text-ink-2">{fmtNum(profileKcal)} kcal</span>
+            /giorno. Il coach lo usa per calibrare i consigli.
+          </p>
+        )}
         {me?.avatar && (
           <button
             onClick={() => {

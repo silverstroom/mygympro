@@ -7,6 +7,7 @@ import type {
   Workout,
 } from "./types";
 import { bestSetFor, e1rm, streakWeeks, weeklyStats } from "./calc";
+import { ageFrom, bmr, goalCalories, tdee } from "./health";
 import { buildInsights } from "./insights";
 import { suggestFor } from "./progression";
 import { effectiveRoutineId } from "./session";
@@ -223,7 +224,38 @@ export function answer(question: string, ctx: ChatCtx): ChatAnswer {
     };
   }
 
-  if (/\b(proteine|mangiare|dieta|calorie|alimentazione|integrator)\b/.test(q)) {
+  if (
+    /\b(fabbisogno|kcal|calorie|calorico|metabolismo|tdee)\b/.test(q) &&
+    !/\bproteine\b/.test(q)
+  ) {
+    const last = ctx.bodyweight[ctx.bodyweight.length - 1];
+    const age = ageFrom(ctx.settings.birthYear, new Date().getFullYear());
+    const b = bmr(ctx.settings.sex ?? null, age, ctx.settings.height, last?.w ?? null);
+    const days = ctx.week.filter(Boolean).length;
+    const t = tdee(b, days);
+    if (b == null || t == null) {
+      return {
+        text: "Per stimare il tuo fabbisogno mi servono età, altezza e almeno una pesata: completa il profilo dalle impostazioni e te lo calcolo al volo.",
+        actions: [{ label: "Completa il profilo", type: "href", href: "/impostazioni" }],
+      };
+    }
+    const target = goalCalories(t, ctx.settings.goal)!;
+    const daysTxt =
+      days > 0
+        ? `con i tuoi ${days} allenamenti a settimana`
+        : "con poca attività programmata";
+    const goalTxt =
+      ctx.settings.goal === "dimagrimento"
+        ? ` Per dimagrire punta a ≈ ${fmtNum(target)} kcal: un deficit moderato che non ti spegne in palestra.`
+        : ctx.settings.goal === "massa"
+          ? ` Per costruire massa punta a ≈ ${fmtNum(target)} kcal: surplus pulito, niente abbuffate.`
+          : ` Per mantenerti resta intorno a ${fmtNum(target)} kcal.`;
+    return {
+      text: `A riposo bruci circa ${fmtNum(b)} kcal al giorno (metabolismo basale); ${daysTxt} il fabbisogno sale a ≈ ${fmtNum(t)} kcal.${goalTxt} Sono stime oneste, non oracoli: verifica con la bilancia su 2-3 settimane e aggiusta.`,
+    };
+  }
+
+  if (/\b(proteine|mangiare|dieta|alimentazione|integrator)\b/.test(q)) {
     const last = ctx.bodyweight[ctx.bodyweight.length - 1];
     const protTxt = last
       ? `Per il tuo peso (${fmtNum(last.w)} kg) una buona forchetta è ${Math.round(last.w * 1.6)}-${Math.round(last.w * 2.2)} g di proteine al giorno, distribuite nei pasti.`
