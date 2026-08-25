@@ -35,6 +35,8 @@ import type { Equip } from "@/lib/plangen";
 import { buildInsights } from "@/lib/insights";
 import { hypeForPR, hypeForSet, hypeForVolume, shouldHypeSet } from "@/lib/hype";
 import { buildSessionEntries } from "@/lib/session";
+import { isGuest, GUEST_WO_LIMIT } from "@/lib/guest";
+import { useSignup } from "@/components/SignupPrompt";
 import { Button, Card, Seg, Sheet, Tag, toast } from "@/components/ui";
 import Stepper from "@/components/Stepper";
 import { ExMedia } from "@/components/ExMedia";
@@ -126,6 +128,10 @@ function QuickCard() {
   const [equip, setEquip] = useState<Equip>("palestra");
 
   const go = async () => {
+    if (isGuest() && workouts.length >= GUEST_WO_LIMIT) {
+      useSignup.getState().show("workouts");
+      return;
+    }
     try {
       const index = await loadIndex();
       const q = generateQuickWorkout(minutes, equip);
@@ -434,6 +440,30 @@ function CompleteView() {
           </div>
           <div className="mb-1.5 text-[12.5px] font-medium text-amber">{hypeForPR()}</div>
           <PRList prs={summary.prs} />
+        </motion.div>
+      )}
+
+      {isGuest() && (
+        <motion.div
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.45, duration: 0.45, ease: [0.23, 1, 0.32, 1] }}
+          className="mb-4 rounded-[16px] border border-[color:var(--accent)] bg-accent-soft p-4"
+        >
+          <div className="mb-1 text-[14px] font-bold">
+            Risultati salvati nei tuoi 3 da ospite
+          </div>
+          <p className="mb-3 text-[12.5px] leading-snug text-ink-2">
+            Con un account gratuito ogni allenamento resta nello storico per
+            sempre, con grafici, record e progressione dei carichi.
+          </p>
+          <Button
+            variant="primary"
+            className="w-full"
+            onClick={() => useSignup.getState().show("post-workout")}
+          >
+            Crea il tuo account
+          </Button>
         </motion.div>
       )}
 

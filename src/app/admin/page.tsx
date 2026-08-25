@@ -28,6 +28,7 @@ import { fmtShort } from "@/lib/dates";
 import { Button, Card, Sheet, Tag, toast } from "@/components/ui";
 import { initialsOf } from "@/components/AuthScreen";
 import PasswordStrength from "@/components/PasswordStrength";
+import PasswordInput from "@/components/PasswordInput";
 
 interface Row {
   account: Account;
@@ -138,6 +139,7 @@ export default function AdminPage() {
                     </Tag>
                   )}
                   {a.demo && <Tag>Demo</Tag>}
+                  {a.guest && <Tag>Ospite</Tag>}
                   {isMe && <Tag tone="accent">Tu</Tag>}
                 </div>
                 <div className="text-[12px] text-ink-3">
@@ -161,7 +163,7 @@ export default function AdminPage() {
                   <Eye size={14} weight="bold" />
                   Apri profilo
                 </button>
-                {!a.demo && (
+                {!a.demo && !a.guest && (
                   <button
                     onClick={() => {
                       setNewPw("");
@@ -173,7 +175,7 @@ export default function AdminPage() {
                     Reset password
                   </button>
                 )}
-                {!a.demo && (
+                {!a.demo && !a.guest && (
                   <button
                     onClick={() => {
                       const res = setAdmin(me.id, a.id, !a.admin);
@@ -224,14 +226,7 @@ export default function AdminPage() {
         title={resetFor ? `Nuova password per ${resetFor.name}` : ""}
       >
         <div className="flex flex-col gap-3 pb-2">
-          <input
-            type="password"
-            value={newPw}
-            onChange={(e) => setNewPw(e.target.value)}
-            placeholder="Nuova password (minimo 4 caratteri)"
-            autoFocus
-            className="h-12 rounded-[12px] border border-line bg-surface-2 px-4 text-[15px] outline-none transition-colors placeholder:text-ink-3 focus:border-accent"
-          />
+          <PasswordInput value={newPw} onChange={setNewPw} placeholder="Nuova password (minimo 4 caratteri)" autoFocus autoComplete="new-password" />
           <PasswordStrength value={newPw} className="px-0.5" />
           <Button
             variant="primary"

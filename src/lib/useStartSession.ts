@@ -6,6 +6,8 @@ import { loadIndex } from "./data";
 import { buildSessionEntries } from "./session";
 import { useStore } from "./store";
 import { toast } from "@/components/ui";
+import { isGuest, GUEST_WO_LIMIT } from "./guest";
+import { useSignup } from "@/components/SignupPrompt";
 
 export function useStartSession() {
   const router = useRouter();
@@ -15,6 +17,10 @@ export function useStartSession() {
       const s = useStore.getState();
       if (s.active) {
         router.push("/allenamento");
+        return;
+      }
+      if (isGuest() && s.workouts.length >= GUEST_WO_LIMIT) {
+        useSignup.getState().show("workouts");
         return;
       }
       try {

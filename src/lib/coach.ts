@@ -7,7 +7,7 @@ export interface CoachStep {
   title: string;
   body: string;
   cta: string | null;
-  action: "piano" | "allenamento" | "peso" | "obiettivo" | "sposta" | null;
+  action: "piano" | "allenamento" | "peso" | "obiettivo" | "sposta" | "signup" | null;
   tone: "accent" | "amber" | "quiet";
 }
 
@@ -16,7 +16,7 @@ type CoachState = Pick<
   "routines" | "week" | "overrides" | "workouts" | "bodyweight" | "goalWeight" | "active"
 >;
 
-export function nextStep(s: CoachState): CoachStep {
+export function nextStep(s: CoachState, opts?: { guest?: boolean }): CoachStep {
   const today = todayISO();
 
   if (s.active) {
@@ -83,6 +83,17 @@ export function nextStep(s: CoachState): CoachStep {
       body: "La scheda di oggi è pronta, con i carichi già suggeriti dall'ultima volta.",
       cta: "Vai al workout",
       action: "allenamento",
+      tone: "accent",
+    };
+  }
+
+  if (opts?.guest && s.workouts.length >= 1) {
+    return {
+      key: "signup",
+      title: "Metti al sicuro i tuoi progressi",
+      body: "Stai usando MyGymPro da ospite: con un account gratuito lo storico non ha limiti e non si perde nulla.",
+      cta: "Crea il tuo account",
+      action: "signup",
       tone: "accent",
     };
   }

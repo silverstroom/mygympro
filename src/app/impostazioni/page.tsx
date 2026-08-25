@@ -30,6 +30,9 @@ import {
 } from "@/lib/auth";
 import { ACCENTS, BGS, DEFAULT_ACCENT, DEFAULT_BG } from "@/lib/themes";
 import { createAppleParser, parseActivitiesCsv } from "@/lib/importers";
+import { useSignup } from "@/components/SignupPrompt";
+import PasswordInput from "@/components/PasswordInput";
+import { UserCirclePlus } from "@phosphor-icons/react";
 import { Button, Card, Sheet, toast } from "@/components/ui";
 import Stepper from "@/components/Stepper";
 import PasswordStrength from "@/components/PasswordStrength";
@@ -319,7 +322,7 @@ export default function ImpostazioniPage() {
           <div className="w-[150px]">
             <Stepper
               value={settings.height ?? 0}
-              onChange={(v) => setSettings({ height: v > 0 ? v : null })}
+              onChange={(v) => setSettings({ height: v >= 120 ? v : null })}
               step={1}
               min={0}
               max={230}
@@ -340,7 +343,24 @@ export default function ImpostazioniPage() {
             Rimuovi la foto profilo
           </button>
         )}
-        {me && !me.demo && (
+        {me?.guest && (
+          <div className="mt-3 border-t border-line pt-3">
+            <p className="mb-2.5 text-[12.5px] leading-snug text-ink-2">
+              Stai usando MyGymPro da ospite: workout salvabili limitati a 3 e
+              libreria ridotta. Con un account gratuito sblocchi tutto e i dati
+              fatti finora vengono conservati.
+            </p>
+            <Button
+              variant="primary"
+              className="w-full"
+              onClick={() => useSignup.getState().show("timed")}
+            >
+              <UserCirclePlus size={18} weight="bold" />
+              Crea il tuo account gratis
+            </Button>
+          </div>
+        )}
+        {me && !me.demo && !me.guest && (
           <div className="mt-3 flex flex-wrap gap-2 border-t border-line pt-3">
             <button
               onClick={() => setPwOpen(true)}
@@ -396,7 +416,13 @@ export default function ImpostazioniPage() {
                 key={key}
                 aria-label={a.name}
                 title={a.name}
-                onClick={() => setSettings({ accent: key })}
+                onClick={() => {
+                  if (me?.guest) {
+                    useSignup.getState().show("theme");
+                    return;
+                  }
+                  setSettings({ accent: key });
+                }}
                 className={`press h-10 w-10 rounded-full border-2 transition-transform ${
                   on ? "scale-110 border-[color:var(--text)]" : "border-transparent"
                 }`}
@@ -412,7 +438,13 @@ export default function ImpostazioniPage() {
             return (
               <button
                 key={key}
-                onClick={() => setSettings({ bg: key })}
+                onClick={() => {
+                  if (me?.guest) {
+                    useSignup.getState().show("theme");
+                    return;
+                  }
+                  setSettings({ bg: key });
+                }}
                 className={`press flex items-center gap-2 rounded-full border px-3 py-2 text-[12.5px] font-semibold ${
                   on ? "border-accent text-ink" : "border-line text-ink-2"
                 }`}
@@ -495,11 +527,29 @@ export default function ImpostazioniPage() {
           esporta le attività in CSV e caricalo qui sotto.
         </div>
         <div className="flex flex-col gap-2">
-          <Button disabled={importing} onClick={() => appleRef.current?.click()}>
+          <Button
+            disabled={importing}
+            onClick={() => {
+              if (me?.guest) {
+                useSignup.getState().show("devices");
+                return;
+              }
+              appleRef.current?.click();
+            }}
+          >
             <Watch size={18} weight="bold" />
             {importing ? "Importazione in corso..." : "Importa export Apple Salute"}
           </Button>
-          <Button disabled={importing} onClick={() => csvRef.current?.click()}>
+          <Button
+            disabled={importing}
+            onClick={() => {
+              if (me?.guest) {
+                useSignup.getState().show("devices");
+                return;
+              }
+              csvRef.current?.click();
+            }}
+          >
             <UploadSimple size={18} weight="bold" />
             Importa CSV attività
           </Button>
@@ -612,32 +662,10 @@ export default function ImpostazioniPage() {
 
       <Sheet open={pwOpen} onClose={() => setPwOpen(false)} title="Cambia password">
         <div className="flex flex-col gap-3 pb-2">
-          <input
-            type="password"
-            value={oldPw}
-            onChange={(e) => setOldPw(e.target.value)}
-            placeholder="Password attuale"
-            autoComplete="current-password"
-            className="h-12 rounded-[12px] border border-line bg-surface-2 px-4 text-[15px] outline-none transition-colors placeholder:text-ink-3 focus:border-accent"
-          />
-          <input
-            type="password"
-            value={newPw1}
-            onChange={(e) => setNewPw1(e.target.value)}
-            placeholder="Nuova password (minimo 4 caratteri)"
-            autoComplete="new-password"
-            className="h-12 rounded-[12px] border border-line bg-surface-2 px-4 text-[15px] outline-none transition-colors placeholder:text-ink-3 focus:border-accent"
-          />
+          <PasswordInput value={oldPw} onChange={setOldPw} placeholder="Password attuale" />
+          <PasswordInput value={newPw1} onChange={setNewPw1} placeholder="Nuova password (minimo 4 caratteri)" autoComplete="new-password" />
           <PasswordStrength value={newPw1} className="px-0.5" />
-          <input
-            type="password"
-            value={newPw2}
-            onChange={(e) => setNewPw2(e.target.value)}
-            placeholder="Ripeti la nuova password"
-            autoComplete="new-password"
-            onKeyDown={(e) => e.key === "Enter" && doChangePw()}
-            className="h-12 rounded-[12px] border border-line bg-surface-2 px-4 text-[15px] outline-none transition-colors placeholder:text-ink-3 focus:border-accent"
-          />
+          <PasswordInput value={newPw2} onChange={setNewPw2} placeholder="Ripeti la nuova password" autoComplete="new-password" onEnter={doChangePw} />
           <Button variant="primary" onClick={doChangePw}>
             <Key size={16} weight="bold" />
             Aggiorna password

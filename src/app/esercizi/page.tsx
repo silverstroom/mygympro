@@ -9,6 +9,9 @@ import { BODY_IT, tBody, tEquip, tTarget } from "@/lib/it";
 import { useStore } from "@/lib/store";
 import { Button, Chip } from "@/components/ui";
 import { ExThumb } from "@/components/ExMedia";
+import { isGuest, GUEST_EX_LIMIT } from "@/lib/guest";
+import { useSignup } from "@/components/SignupPrompt";
+import { LockSimple } from "@phosphor-icons/react";
 
 const PAGE = 48;
 
@@ -19,9 +22,11 @@ export default function EserciziPage() {
   const [bp, setBp] = useState<string | null>(null);
   const [eq, setEq] = useState<string | null>(null);
   const [limit, setLimit] = useState(PAGE);
+  const [guest, setGuest] = useState(false);
 
   useEffect(() => {
     loadIndex().then(setIndex).catch(() => {});
+    setGuest(isGuest());
   }, []);
 
   useEffect(() => {
@@ -43,7 +48,7 @@ export default function EserciziPage() {
       <div className="card-in flex items-baseline justify-between" style={{ "--i": 0 } as React.CSSProperties}>
         <h1 className="display text-[30px]">Esercizi</h1>
         <span className="tnum text-[13px] font-medium text-ink-3">
-          {index ? results.length : "..."}
+          {index ? (guest ? `${Math.min(GUEST_EX_LIMIT, results.length)} di ${results.length}` : results.length) : "..."}
         </span>
       </div>
 
@@ -108,7 +113,7 @@ export default function EserciziPage() {
       )}
 
       <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-        {results.slice(0, limit).map((ex, i) => (
+        {results.slice(0, guest ? Math.min(limit, GUEST_EX_LIMIT) : limit).map((ex, i) => (
           <div
             key={ex.i}
             className={i < 12 ? "card-in" : undefined}
@@ -138,11 +143,25 @@ export default function EserciziPage() {
         ))}
       </div>
 
-      {results.length > limit && (
+      {guest && results.length > GUEST_EX_LIMIT && limit >= GUEST_EX_LIMIT ? (
+        <button
+          onClick={() => useSignup.getState().show("library")}
+          className="press flex w-full flex-col items-center gap-2 rounded-[16px] border border-[color:var(--accent)] bg-accent-soft p-5 text-center"
+        >
+          <LockSimple size={22} weight="fill" color="var(--accent)" />
+          <span className="text-[15px] font-bold">
+            Altri {results.length - GUEST_EX_LIMIT} esercizi ti aspettano
+          </span>
+          <span className="max-w-[300px] text-[12.5px] leading-snug text-ink-2">
+            Da ospite vedi {GUEST_EX_LIMIT} esercizi: crea un account gratuito e
+            sblocca l'intera libreria con demo animate.
+          </span>
+        </button>
+      ) : results.length > (guest ? Math.min(limit, GUEST_EX_LIMIT) : limit) ? (
         <Button onClick={() => setLimit((l) => l + PAGE)}>
           Mostra altri {Math.min(PAGE, results.length - limit)}
         </Button>
-      )}
+      ) : null}
     </div>
   );
 }

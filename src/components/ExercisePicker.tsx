@@ -12,6 +12,9 @@ import { BODY_IT, tBody, tEquip, tTarget } from "@/lib/it";
 import { useStore } from "@/lib/store";
 import { Button, Chip, Sheet, toast } from "@/components/ui";
 import { ExThumb } from "@/components/ExMedia";
+import { isGuest, GUEST_EX_LIMIT } from "@/lib/guest";
+import { useSignup } from "@/components/SignupPrompt";
+import { LockSimple } from "@phosphor-icons/react";
 
 const PAGE = 60;
 
@@ -34,6 +37,11 @@ export default function ExercisePicker({
   const [creating, setCreating] = useState(false);
   const [cName, setCName] = useState("");
   const [cBody, setCBody] = useState("chest");
+  const [guest, setGuest] = useState(false);
+
+  useEffect(() => {
+    if (open) setGuest(isGuest());
+  }, [open]);
 
   useEffect(() => {
     if (open) loadIndex().then(setIndex).catch(() => toast("Impossibile caricare gli esercizi", "warn"));
@@ -161,7 +169,7 @@ export default function ExercisePicker({
               </div>
             </div>
           )}
-          {results.slice(0, limit).map((ex) => (
+          {results.slice(0, guest ? Math.min(limit, GUEST_EX_LIMIT) : limit).map((ex) => (
             <button
               key={ex.i}
               onClick={() => onPick(ex)}
@@ -180,13 +188,23 @@ export default function ExercisePicker({
               <Plus size={18} color="var(--accent)" weight="bold" className="shrink-0" />
             </button>
           ))}
-          {results.length > limit && (
+          {guest && results.length > GUEST_EX_LIMIT && limit >= GUEST_EX_LIMIT ? (
+            <div className="px-2 pb-2 pt-1">
+              <button
+                onClick={() => useSignup.getState().show("library")}
+                className="press flex w-full items-center justify-center gap-2 rounded-full border border-[color:var(--accent)] bg-accent-soft px-4 py-3 text-[13px] font-bold text-accent"
+              >
+                <LockSimple size={15} weight="fill" />
+                Sblocca gli altri {results.length - GUEST_EX_LIMIT} esercizi
+              </button>
+            </div>
+          ) : results.length > (guest ? Math.min(limit, GUEST_EX_LIMIT) : limit) ? (
             <div className="px-2 pb-2 pt-1">
               <Button className="w-full" onClick={() => setLimit((l) => l + PAGE)}>
                 Mostra altri {Math.min(PAGE, results.length - limit)}
               </Button>
             </div>
-          )}
+          ) : null}
         </div>
       </div>
     </Sheet>

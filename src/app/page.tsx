@@ -23,7 +23,6 @@ import {
   Timer,
 } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
-import { currentAccount } from "@/lib/auth";
 import { addDays, DAY_FULL, fmtLong, fmtNum, fmtShort, mondayOf, todayISO, weekKeyOf, dayIdxOf } from "@/lib/dates";
 import { streakWeeks } from "@/lib/calc";
 import { effectiveRoutineId } from "@/lib/session";
@@ -36,6 +35,8 @@ import Stepper from "@/components/Stepper";
 import { ROUTINE_ICONS } from "@/components/routineIcons";
 import PlanWizard from "@/components/PlanWizard";
 import { nextStep } from "@/lib/coach";
+import { useSignup } from "@/components/SignupPrompt";
+import { currentAccount } from "@/lib/auth";
 
 function Onboarding({ accName }: { accName: string }) {
   const setOnboarded = useStore((s) => s.setOnboarded);
@@ -78,6 +79,7 @@ function Onboarding({ accName }: { accName: string }) {
 }
 
 const COACH_ICONS: Record<string, React.ReactNode> = {
+  signup: <Sparkle size={20} weight="fill" />,
   resume: <Timer size={20} weight="fill" />,
   plan: <CompassRose size={20} weight="fill" />,
   first: <Play size={20} weight="fill" />,
@@ -106,14 +108,22 @@ function CoachCard({
   const bodyweight = useStore((s) => s.bodyweight);
   const goalWeight = useStore((s) => s.goalWeight);
   const active = useStore((s) => s.active);
+  const [guest, setGuest] = useState(false);
+  useEffect(() => {
+    setGuest(!!currentAccount()?.guest);
+  }, []);
 
-  const step = nextStep({ routines, week, overrides, workouts, bodyweight, goalWeight, active });
+  const step = nextStep(
+    { routines, week, overrides, workouts, bodyweight, goalWeight, active },
+    { guest }
+  );
 
   const go = () => {
     if (step.action === "piano") router.push("/piano?wizard=1");
     else if (step.action === "allenamento") router.push("/allenamento");
     else if (step.action === "peso") onPeso();
     else if (step.action === "obiettivo") onObiettivo();
+    else if (step.action === "signup") useSignup.getState().show("coach");
   };
 
   const toneCls =
@@ -421,7 +431,7 @@ export default function Home() {
                   {fmtNum(Math.abs(delta))}
                 </span>
               )}
-              {settingsHeight != null && settingsHeight > 0 && (
+              {settingsHeight != null && settingsHeight >= 120 && (
                 <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-bold text-ink-2">
                   BMI {fmtNum(Math.round((lastBW.w / Math.pow(settingsHeight / 100, 2)) * 10) / 10)}
                 </span>

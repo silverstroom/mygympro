@@ -3,8 +3,9 @@
 import { useMemo, useState } from "react";
 import { ArrowRight, Barbell, Plus, ShieldStar, Sparkle, X } from "@phosphor-icons/react";
 import type { Account } from "@/lib/auth";
-import { legacyDataPresent, listAccounts, login, register } from "@/lib/auth";
+import { enterAsGuest, legacyDataPresent, listAccounts, login, register } from "@/lib/auth";
 import { Button, Sheet, toast } from "@/components/ui";
+import PasswordInput from "@/components/PasswordInput";
 import PasswordStrength from "@/components/PasswordStrength";
 
 export function initialsOf(name: string): string {
@@ -19,7 +20,7 @@ function enter() {
 }
 
 export default function AuthScreen() {
-  const accounts = useMemo(() => listAccounts(), []);
+  const accounts = useMemo(() => listAccounts().filter((a) => !a.guest), []);
   const legacy = useMemo(() => legacyDataPresent(), []);
   const [pick, setPick] = useState<Account | null>(null);
   const [pw, setPw] = useState("");
@@ -142,24 +143,9 @@ export default function AuthScreen() {
             autoComplete="username"
             className="h-12 rounded-[12px] border border-line bg-surface-2 px-4 text-[15px] outline-none transition-colors placeholder:text-ink-3 focus:border-accent"
           />
-          <input
-            type="password"
-            value={pw1}
-            onChange={(e) => setPw1(e.target.value)}
-            placeholder="Password (minimo 4 caratteri)"
-            autoComplete="new-password"
-            className="h-12 rounded-[12px] border border-line bg-surface-2 px-4 text-[15px] outline-none transition-colors placeholder:text-ink-3 focus:border-accent"
-          />
+          <PasswordInput value={pw1} onChange={setPw1} placeholder="Password (minimo 4 caratteri)" autoComplete="new-password" />
           <PasswordStrength value={pw1} className="px-0.5" />
-          <input
-            type="password"
-            value={pw2}
-            onChange={(e) => setPw2(e.target.value)}
-            placeholder="Ripeti la password"
-            autoComplete="new-password"
-            onKeyDown={(e) => e.key === "Enter" && doRegister()}
-            className="h-12 rounded-[12px] border border-line bg-surface-2 px-4 text-[15px] outline-none transition-colors placeholder:text-ink-3 focus:border-accent"
-          />
+          <PasswordInput value={pw2} onChange={setPw2} placeholder="Ripeti la password" autoComplete="new-password" onEnter={doRegister} />
           {firstReal && (
             <div className="flex items-start gap-2 rounded-[12px] bg-amber-soft px-3.5 py-2.5 text-[12.5px] font-medium leading-snug text-amber">
               <ShieldStar size={16} weight="fill" className="mt-0.5 shrink-0" />
@@ -175,18 +161,20 @@ export default function AuthScreen() {
         </div>
       )}
 
+      <button
+        onClick={() => {
+          enterAsGuest();
+          window.location.reload();
+        }}
+        className="card-in press mt-3 text-center text-[13px] font-semibold text-ink-3 underline underline-offset-4 hover:text-ink"
+        style={{ "--i": 3 } as React.CSSProperties}
+      >
+        Prova senza account: continua come ospite
+      </button>
+
       <Sheet open={pick != null} onClose={() => setPick(null)} title={pick ? `Ciao, ${pick.name}` : ""}>
         <div className="flex flex-col gap-3 pb-2">
-          <input
-            type="password"
-            value={pw}
-            onChange={(e) => setPw(e.target.value)}
-            placeholder="Password"
-            autoFocus
-            autoComplete="current-password"
-            onKeyDown={(e) => e.key === "Enter" && doLogin()}
-            className="h-12 rounded-[12px] border border-line bg-surface-2 px-4 text-[15px] outline-none transition-colors placeholder:text-ink-3 focus:border-accent"
-          />
+          <PasswordInput value={pw} onChange={setPw} placeholder="Password" autoFocus onEnter={doLogin} />
           <Button variant="primary" disabled={busy} onClick={doLogin}>
             {busy ? "Controllo..." : "Entra"}
           </Button>

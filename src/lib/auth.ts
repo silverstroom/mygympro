@@ -3,6 +3,7 @@ export interface Account {
   name: string;
   admin: boolean;
   demo: boolean;
+  guest?: boolean;
   salt: string;
   hash: string;
   created: number;
@@ -134,7 +135,7 @@ function migrateLegacyInto(id: string): boolean {
 export async function register(
   name: string,
   password: string,
-  opts?: { demo?: boolean }
+  opts?: { demo?: boolean; fromGuestId?: string }
 ): Promise<{ ok: true; account: Account; migrated: boolean } | { ok: false; error: string }> {
   const clean = name.trim();
   if (clean.length < 2) return { ok: false, error: "Il nome deve avere almeno 2 caratteri" };
@@ -144,7 +145,7 @@ export async function register(
   if (nameTaken(clean)) return { ok: false, error: "Esiste già un account con questo nome" };
 
   const accounts = listAccounts();
-  const firstReal = accounts.filter((a) => !a.demo).length === 0;
+  const firstReal = accounts.filter((a) => !a.demo && !a.guest).length === 0;
   const salt = randomSalt();
   const hash = opts?.demo ? "" : await hashPassword(password, salt);
   const account: Account = {
@@ -158,9 +159,50 @@ export async function register(
     lastLogin: Date.now(),
   };
   saveAccounts([...accounts, account]);
-  const migrated = !opts?.demo && firstReal ? migrateLegacyInto(account.id) : false;
+  let migrated = false;
+  const s = ls();
+  if (opts?.fromGuestId && s) {
+    const guestData = s.getItem(userStorageKey(opts.fromGuestId));
+    const guest = accounts.find((a) => a.id === opts.fromGuestId && a.guest);
+    if (guest && guestData) {
+      s.setItem(userStorageKey(account.id), guestData);
+      migrated = true;
+    }
+    if (guest) {
+      saveAccounts(listAccounts().filter((a) => a.id !== opts.fromGuestId));
+      s.removeItem(userStorageKey(opts.fromGuestId));
+    }
+  }
+  if (!migrated && !opts?.demo && firstReal) {
+    migrated = migrateLegacyInto(account.id);
+  }
   setSession({ id: account.id });
   return { ok: true, account, migrated };
+}
+
+export function enterAsGuest(): Account {
+  const accounts = listAccounts();
+  const existing = accounts.find((a) => a.guest);
+  if (existing) {
+    existing.lastLogin = Date.now();
+    saveAccounts(accounts);
+    setSession({ id: existing.id });
+    return existing;
+  }
+  const account: Account = {
+    id: uid(),
+    name: "Ospite",
+    admin: false,
+    demo: false,
+    guest: true,
+    salt: randomSalt(),
+    hash: "",
+    created: Date.now(),
+    lastLogin: Date.now(),
+  };
+  saveAccounts([...accounts, account]);
+  setSession({ id: account.id });
+  return account;
 }
 
 export async function login(
@@ -170,7 +212,7 @@ export async function login(
   const accounts = listAccounts();
   const account = accounts.find((a) => a.id === id);
   if (!account) return { ok: false, error: "Account non trovato" };
-  if (!account.demo) {
+  if (!account.demo && !account.guest) {
     const hash = await hashPassword(password, account.salt);
     if (hash !== account.hash) return { ok: false, error: "Password sbagliata" };
   }

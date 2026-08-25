@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
   accountById,
+  enterAsGuest,
   adminResetPassword,
   changePassword,
   deleteAccount,
@@ -161,6 +162,38 @@ describe("deleteAccount", () => {
     const b = await register("Anna", "abcd");
     if (!a.ok || !b.ok) throw new Error();
     expect(deleteAccount(b.account.id, a.account.id).ok).toBe(false);
+  });
+});
+
+describe("guest", () => {
+  it("enterAsGuest crea e poi riusa lo stesso account", () => {
+    const g1 = enterAsGuest();
+    expect(g1.guest).toBe(true);
+    expect(g1.admin).toBe(false);
+    expect(getSession()?.id).toBe(g1.id);
+    logout();
+    const g2 = enterAsGuest();
+    expect(g2.id).toBe(g1.id);
+  });
+
+  it("il primo account reale dopo l'ospite è admin e migra i dati ospite", async () => {
+    const g = enterAsGuest();
+    seedAccountState(g.id, { workouts: [{ d: "2026-08-20" }], onboarded: true });
+    const r = await register("Salvo", "1234", { fromGuestId: g.id });
+    expect(r.ok).toBe(true);
+    if (!r.ok) throw new Error();
+    expect(r.account.admin).toBe(true);
+    expect(r.migrated).toBe(true);
+    expect(localStorage.getItem(userStorageKey(r.account.id))).toContain("2026-08-20");
+    expect(accountById(g.id)).toBeNull();
+    expect(localStorage.getItem(userStorageKey(g.id))).toBeNull();
+  });
+
+  it("l'ospite entra senza password", async () => {
+    const g = enterAsGuest();
+    logout();
+    const l = await login(g.id, "");
+    expect(l.ok).toBe(true);
   });
 });
 

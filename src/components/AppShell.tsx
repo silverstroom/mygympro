@@ -18,6 +18,7 @@ import { buildDemoState } from "@/lib/demo";
 import type { Session } from "@/lib/auth";
 import {
   accountById,
+  enterAsGuest,
   getSession,
   listAccounts,
   login,
@@ -28,6 +29,7 @@ import {
 import RestTimer from "@/components/RestTimer";
 import AuthScreen from "@/components/AuthScreen";
 import { Toasts } from "@/components/ui";
+import SignupPrompt, { useSignup } from "@/components/SignupPrompt";
 import { applyTheme } from "@/lib/themes";
 
 function ThemeApplier() {
@@ -83,12 +85,32 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       }
       return;
     }
+    if (!current) {
+      const accounts = listAccounts();
+      const hasVisible = accounts.some((a) => !a.guest);
+      if (!hasVisible) {
+        const existing = accounts.find((a) => a.guest);
+        enterAsGuest();
+        if (existing) {
+          window.location.reload();
+          return;
+        }
+        setSess(getSession());
+        return;
+      }
+    }
     setSess(current);
   }, []);
 
   const authed = sess != null;
   const viewer = sess ? accountById(sess.id) : null;
   const impersonator = sess?.via ? accountById(sess.via) : null;
+
+  useEffect(() => {
+    if (!authed || !viewer?.guest) return;
+    const t = setTimeout(() => useSignup.getState().showTimed(), 75000);
+    return () => clearTimeout(t);
+  }, [authed, viewer?.guest]);
 
   const doneSets = active
     ? active.entries.reduce((n, e) => n + e.sets.filter((x) => x.done).length, 0)
@@ -198,6 +220,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <ThemeApplier />
       <RestTimer />
       <Toasts />
+      <SignupPrompt />
 
       {authed && (
         <nav
