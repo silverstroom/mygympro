@@ -341,7 +341,16 @@ export default function ImpostazioniPage() {
           <div className="w-[150px]">
             <Stepper
               value={settings.height ?? 0}
-              onChange={(v) => setSettings({ height: v >= 120 ? v : null })}
+              onChange={(v) => {
+                const cur = settings.height;
+                const next =
+                  cur == null || cur < 120
+                    ? v >= 120
+                      ? v
+                      : 170
+                    : Math.min(230, Math.max(120, v));
+                setSettings({ height: next });
+              }}
               step={1}
               min={0}
               max={230}
@@ -357,9 +366,16 @@ export default function ImpostazioniPage() {
           <div className="w-[150px]">
             <Stepper
               value={ageFrom(settings.birthYear, thisYear) ?? 0}
-              onChange={(v) =>
-                setSettings({ birthYear: v >= 13 ? thisYear - v : null })
-              }
+              onChange={(v) => {
+                const cur = ageFrom(settings.birthYear, thisYear);
+                const next =
+                  cur == null
+                    ? v >= 13 && v <= 100
+                      ? v
+                      : 30
+                    : Math.min(100, Math.max(13, v));
+                setSettings({ birthYear: thisYear - next });
+              }}
               step={1}
               min={0}
               max={100}
