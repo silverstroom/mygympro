@@ -207,6 +207,38 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         )}
 
+        {authed && (
+          <header className="mx-auto flex w-full max-w-[640px] items-center justify-between px-4 pt-3 lg:hidden">
+            <Link href="/" className="press-soft flex items-center gap-2">
+              <span className="flex h-8 w-8 items-center justify-center rounded-[10px] bg-accent">
+                <Barbell size={17} weight="bold" color="var(--accent-ink)" />
+              </span>
+              <span className="display text-[15px] leading-none">
+                MyGym<span className="text-accent">Pro</span>
+              </span>
+            </Link>
+            <Link
+              href="/impostazioni"
+              aria-label="Impostazioni"
+              className={`press flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border ${
+                isActive(pathname, "/impostazioni")
+                  ? "border-accent bg-accent-soft text-accent"
+                  : "border-line-strong bg-surface-2 text-ink-2"
+              }`}
+            >
+              {viewer?.avatar ? (
+                <img src={viewer.avatar} alt="" className="h-full w-full object-cover" />
+              ) : viewer && !viewer.guest ? (
+                <span className="text-[13px] font-bold">
+                  {viewer.name.charAt(0).toUpperCase()}
+                </span>
+              ) : (
+                <GearSix size={17} weight="bold" />
+              )}
+            </Link>
+          </header>
+        )}
+
         <main
           className="mx-auto w-full max-w-[640px] flex-1 px-4 pt-4 lg:px-8 lg:pt-8"
           style={{ paddingBottom: "16px" }}
