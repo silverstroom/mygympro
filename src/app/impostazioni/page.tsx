@@ -23,11 +23,13 @@ import { exportJSON, importJSON, useStore } from "@/lib/store";
 import { buildDemoState } from "@/lib/demo";
 import type { Account } from "@/lib/auth";
 import {
+  backupInfo,
   changePassword,
   currentAccount,
   deleteAccount,
   listAccounts,
   logout,
+  restoreBackup,
   setAvatar,
 } from "@/lib/auth";
 import { ACCENTS, BGS, DEFAULT_ACCENT, DEFAULT_BG } from "@/lib/themes";
@@ -90,6 +92,8 @@ export default function ImpostazioniPage() {
   const [confirmReset, setConfirmReset] = useState(false);
   const [me, setMe] = useState<Account | null>(null);
   const [accountCount, setAccountCount] = useState(0);
+  const [backupAt, setBackupAt] = useState<number | null>(null);
+  const [confirmRestore, setConfirmRestore] = useState(false);
   const [pwOpen, setPwOpen] = useState(false);
   const [oldPw, setOldPw] = useState("");
   const [newPw1, setNewPw1] = useState("");
@@ -116,8 +120,10 @@ export default function ImpostazioniPage() {
   );
 
   useEffect(() => {
-    setMe(currentAccount());
+    const acc = currentAccount();
+    setMe(acc);
     setAccountCount(listAccounts().length);
+    if (acc) setBackupAt(backupInfo(acc.id));
   }, []);
 
   const doExport = () => {
@@ -726,6 +732,40 @@ export default function ImpostazioniPage() {
             <Trash size={18} weight="bold" />
             Azzera i dati di questo profilo
           </Button>
+          {backupAt != null && (
+            <div className="mt-1 flex items-center justify-between gap-3 border-t border-line pt-3">
+              <span className="min-w-0 text-[12.5px] leading-snug text-ink-3">
+                Copia di sicurezza dell&apos;ultimo accesso:{" "}
+                <span className="text-ink-2">
+                  {new Date(backupAt).toLocaleString("it-IT", {
+                    day: "numeric",
+                    month: "short",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              </span>
+              <button
+                onClick={() => {
+                  if (!me) return;
+                  if (!confirmRestore) {
+                    setConfirmRestore(true);
+                    setTimeout(() => setConfirmRestore(false), 4000);
+                    return;
+                  }
+                  if (restoreBackup(me.id)) window.location.reload();
+                  else toast("Ripristino non riuscito", "warn");
+                }}
+                className={`press shrink-0 rounded-full px-3.5 py-2 text-[12.5px] font-bold ${
+                  confirmRestore
+                    ? "bg-red text-white"
+                    : "bg-surface-2 text-ink-2"
+                }`}
+              >
+                {confirmRestore ? "Sicuro? Sovrascrive" : "Ripristina"}
+              </button>
+            </div>
+          )}
         </div>
       </Card>
 

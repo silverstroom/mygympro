@@ -17,6 +17,11 @@ import {
   stopImpersonation,
   userStorageKey,
   accountStats,
+  backupInfo,
+  restoreBackup,
+  savePreDemo,
+  hasPreDemo,
+  restorePreDemo,
 } from "./auth";
 
 function mockStorage() {
@@ -263,5 +268,43 @@ describe("accountStats", () => {
     await register("Salvo", "1234");
     await register("Anna", "abcd");
     expect(listAccounts().length).toBe(2);
+  });
+});
+
+describe("snapshot e ripristino", () => {
+  it("il login salva una copia dei dati e restoreBackup la rimette", async () => {
+    const r = await register("Salvo", "1234");
+    if (!r.ok) throw new Error("register fallita");
+    const id = r.account.id;
+    seedAccountState(id, { workouts: ["buono"] });
+    logout();
+    await login(id, "1234");
+    expect(backupInfo(id)).toBeTypeOf("number");
+    localStorage.setItem(userStorageKey(id), JSON.stringify({ state: { workouts: [] }, version: 0 }));
+    expect(restoreBackup(id)).toBe(true);
+    const raw = JSON.parse(localStorage.getItem(userStorageKey(id))!);
+    expect(raw.state.workouts).toEqual(["buono"]);
+  });
+
+  it("senza dati salvati non c'è backup né ripristino", async () => {
+    const r = await register("Vuoto", "1234");
+    if (!r.ok) throw new Error("register fallita");
+    expect(backupInfo(r.account.id)).toBeNull();
+    expect(restoreBackup(r.account.id)).toBe(false);
+  });
+
+  it("savePreDemo conserva i dati reali e restorePreDemo li rimette una volta sola", async () => {
+    const r = await register("Salvo", "1234");
+    if (!r.ok) throw new Error("register fallita");
+    const id = r.account.id;
+    seedAccountState(id, { workouts: ["reale"] });
+    savePreDemo(id);
+    expect(hasPreDemo(id)).toBe(true);
+    seedAccountState(id, { workouts: ["demo"] });
+    expect(restorePreDemo(id)).toBe(true);
+    const raw = JSON.parse(localStorage.getItem(userStorageKey(id))!);
+    expect(raw.state.workouts).toEqual(["reale"]);
+    expect(hasPreDemo(id)).toBe(false);
+    expect(restorePreDemo(id)).toBe(false);
   });
 });

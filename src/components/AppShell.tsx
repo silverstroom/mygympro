@@ -11,6 +11,8 @@ import {
   GearSix,
   HouseSimple,
   SignIn,
+  SignOut,
+  Sparkle,
   SquaresFour,
   UserCirclePlus,
 } from "@phosphor-icons/react";
@@ -26,6 +28,7 @@ import {
   login,
   logout,
   register,
+  restorePreDemo,
   seedAccountState,
   stopImpersonation,
 } from "@/lib/auth";
@@ -122,7 +125,26 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(t);
   }, [authed, viewer?.guest]);
 
-  const guestBar = authed && !!viewer?.guest && !impersonator && !active?.restUntil;
+  const demo = useStore((s) => s.demo);
+  const resetAll = useStore((s) => s.resetAll);
+
+  const demoBar = authed && demo && !impersonator && !active?.restUntil;
+  const guestBar =
+    authed && !!viewer?.guest && !impersonator && !active?.restUntil && !demoBar;
+
+  const exitDemo = () => {
+    if (viewer?.demo) {
+      logout();
+      window.location.replace("/");
+      return;
+    }
+    const s = getSession();
+    if (s && restorePreDemo(s.id)) {
+      window.location.reload();
+      return;
+    }
+    resetAll();
+  };
 
   useEffect(() => {
     if (!authed || viewer?.guest || viewer?.demo || impersonator) return;
@@ -138,9 +160,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     document.documentElement.style.setProperty(
       "--bottom-stack",
-      guestBar ? "78px" : "0px"
+      guestBar || demoBar ? "78px" : "0px"
     );
-  }, [guestBar]);
+  }, [guestBar, demoBar]);
 
   const doneSets = active
     ? active.entries.reduce((n, e) => n + e.sets.filter((x) => x.done).length, 0)
@@ -278,6 +300,27 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </span>
         </footer>
       </div>
+
+      {demoBar && (
+        <div
+          className="pointer-events-none fixed inset-x-0 z-40 flex justify-center px-3"
+          style={{ bottom: "calc(var(--nav-h) + var(--sab) + 38px)" }}
+        >
+          <div className="pointer-events-auto flex max-w-full items-center gap-2 rounded-full border border-[rgba(251,191,36,0.4)] bg-[#1d1607] py-1.5 pl-4 pr-1.5 shadow-[0_14px_40px_rgba(0,0,0,0.45)]">
+            <span className="flex min-w-0 items-center gap-1.5 truncate text-[12.5px] font-semibold text-amber">
+              <Sparkle size={14} weight="fill" />
+              Stai guardando la demo
+            </span>
+            <button
+              onClick={exitDemo}
+              className="press flex shrink-0 items-center gap-1.5 rounded-full bg-amber px-3.5 py-2 text-[12.5px] font-bold text-[#1d1607]"
+            >
+              <SignOut size={15} weight="bold" />
+              Esci dalla demo
+            </button>
+          </div>
+        </div>
+      )}
 
       {guestBar && (
         <div

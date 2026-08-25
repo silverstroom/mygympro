@@ -17,7 +17,7 @@ import type {
 } from "./types";
 import { detectPRs, workoutSets, workoutVolume } from "./calc";
 import { todayISO } from "./dates";
-import { getSession, userStorageKey } from "./auth";
+import { getSession, savePreDemo, userStorageKey } from "./auth";
 
 function uid(): string {
   if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
@@ -352,7 +352,11 @@ export const useStore = create<Store>()(
 
       setOnboarded: () => set({ onboarded: true }),
 
-      loadState: (ns, demo) =>
+      loadState: (ns, demo) => {
+        if (demo && !get().demo) {
+          const sess = getSession();
+          if (sess) savePreDemo(sess.id);
+        }
         set({
           routines: ns.routines,
           week: ns.week,
@@ -368,7 +372,8 @@ export const useStore = create<Store>()(
           onboarded: true,
           activities: ns.activities ?? [],
           lastSummary: null,
-        }),
+        });
+      },
 
       resetAll: () => set({ ...initial, hydrated: true, lastSummary: null }),
     }),

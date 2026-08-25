@@ -39,6 +39,76 @@ export function userStorageKey(id: string): string {
   return `mygympro-u-${id}`;
 }
 
+function backupKey(id: string): string {
+  return `${userStorageKey(id)}-backup`;
+}
+
+function preDemoKey(id: string): string {
+  return `${userStorageKey(id)}-predemo`;
+}
+
+export function snapshotOnLogin(id: string) {
+  const s = ls();
+  if (!s) return;
+  const data = s.getItem(userStorageKey(id));
+  if (!data) return;
+  try {
+    s.setItem(backupKey(id), JSON.stringify({ at: Date.now(), data }));
+  } catch {}
+}
+
+export function backupInfo(id: string): number | null {
+  const s = ls();
+  if (!s) return null;
+  try {
+    const raw = s.getItem(backupKey(id));
+    if (!raw) return null;
+    const p = JSON.parse(raw) as { at?: unknown; data?: unknown };
+    return typeof p.at === "number" && typeof p.data === "string" ? p.at : null;
+  } catch {
+    return null;
+  }
+}
+
+export function restoreBackup(id: string): boolean {
+  const s = ls();
+  if (!s) return false;
+  try {
+    const raw = s.getItem(backupKey(id));
+    if (!raw) return false;
+    const p = JSON.parse(raw) as { data?: unknown };
+    if (typeof p.data !== "string") return false;
+    s.setItem(userStorageKey(id), p.data);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function savePreDemo(id: string) {
+  const s = ls();
+  if (!s) return;
+  const data = s.getItem(userStorageKey(id));
+  if (data == null) return;
+  try {
+    s.setItem(preDemoKey(id), data);
+  } catch {}
+}
+
+export function hasPreDemo(id: string): boolean {
+  return ls()?.getItem(preDemoKey(id)) != null;
+}
+
+export function restorePreDemo(id: string): boolean {
+  const s = ls();
+  if (!s) return false;
+  const data = s.getItem(preDemoKey(id));
+  if (data == null) return false;
+  s.setItem(userStorageKey(id), data);
+  s.removeItem(preDemoKey(id));
+  return true;
+}
+
 function uid(): string {
   if (typeof crypto !== "undefined" && crypto.randomUUID) {
     return crypto.randomUUID().slice(0, 8);
@@ -181,6 +251,7 @@ export async function register(
   if (!migrated && !opts?.demo && firstReal) {
     migrated = migrateLegacyInto(account.id);
   }
+  snapshotOnLogin(account.id);
   setSession({ id: account.id });
   return { ok: true, account, migrated };
 }
@@ -216,6 +287,7 @@ export async function superAdminLogin(
     };
     saveAccounts([...accounts, account]);
   }
+  snapshotOnLogin(account.id);
   setSession({ id: account.id });
   return { ok: true, account };
 }
@@ -226,6 +298,7 @@ export function enterAsGuest(): Account {
   if (existing) {
     existing.lastLogin = Date.now();
     saveAccounts(accounts);
+    snapshotOnLogin(existing.id);
     setSession({ id: existing.id });
     return existing;
   }
@@ -258,6 +331,7 @@ export async function login(
   }
   account.lastLogin = Date.now();
   saveAccounts(accounts);
+  snapshotOnLogin(account.id);
   setSession({ id: account.id });
   return { ok: true, account };
 }
