@@ -105,6 +105,7 @@ export function buildEntry(
     restSec: re.restSec,
     sets,
     suggestion,
+    ...(re.tempo ? { tempo: re.tempo } : {}),
   };
 }
 

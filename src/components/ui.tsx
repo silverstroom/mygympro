@@ -18,7 +18,7 @@ export function Button({
     "press inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-colors duration-150 disabled:opacity-40 disabled:pointer-events-none min-h-[46px] px-5 text-[14.5px]";
   const styles: Record<BtnVariant, string> = {
     primary:
-      "bg-accent text-accent-ink hover:bg-accent-strong shadow-[0_6px_20px_rgba(163,230,53,0.25)]",
+      "bg-accent text-accent-ink hover:bg-accent-strong shadow-[0_6px_20px_var(--accent-glow-soft)]",
     soft: "bg-surface-2 text-ink hover:bg-surface-3 border border-line",
     ghost: "bg-transparent text-ink-2 hover:bg-surface-2 hover:text-ink",
     danger: "bg-red-soft text-red hover:bg-[rgba(248,113,113,0.2)]",

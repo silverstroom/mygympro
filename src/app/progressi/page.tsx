@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { CaretRight, Flame, Trophy } from "@phosphor-icons/react";
+import { Bicycle, CaretRight, ChatCircleText, Flame, PersonSimpleRun, Pulse, SwimmingPool, Trophy, Watch } from "@phosphor-icons/react";
 import type { ExerciseIndex } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { loadIndex, resolveEx } from "@/lib/data";
@@ -20,6 +20,7 @@ import { fmtDuration, fmtNum, fmtShort } from "@/lib/dates";
 import { Card, Seg, Tag } from "@/components/ui";
 import { Heatmap, LineChart, Sparkline, WeekBars } from "@/components/charts";
 import BodyMap from "@/components/BodyMap";
+import { buildInsights } from "@/lib/insights";
 import CountUp from "@/components/CountUp";
 
 const CORE_MUSCLES = [
@@ -41,6 +42,7 @@ export default function ProgressiPage() {
   const bodyweight = useStore((s) => s.bodyweight);
   const goalWeight = useStore((s) => s.goalWeight);
   const custom = useStore((s) => s.custom);
+  const activities = useStore((s) => s.activities);
   const [index, setIndex] = useState<ExerciseIndex[] | null>(null);
   const [heatSel, setHeatSel] = useState<string | null>(null);
   const [period, setPeriod] = useState<"7" | "30" | "all">("30");
@@ -50,9 +52,10 @@ export default function ProgressiPage() {
     loadIndex().then(setIndex).catch(() => {});
   }, []);
 
-  const streak = useMemo(() => streakWeeks(workouts), [workouts]);
-  const activity = useMemo(() => activityMinutes(workouts), [workouts]);
-  const weeks = useMemo(() => weeklyStats(workouts, 8), [workouts]);
+  const acts = useMemo(() => activities ?? [], [activities]);
+  const streak = useMemo(() => streakWeeks(workouts, acts), [workouts, acts]);
+  const activity = useMemo(() => activityMinutes(workouts, acts), [workouts, acts]);
+  const weeks = useMemo(() => weeklyStats(workouts, 8, acts), [workouts, acts]);
   const thisWeek = weeks[weeks.length - 1];
 
   const bwData = useMemo(
@@ -91,6 +94,15 @@ export default function ProgressiPage() {
     () => (heatSel ? workouts.filter((w) => w.d === heatSel) : []),
     [workouts, heatSel]
   );
+  const selActs = useMemo(
+    () => (heatSel ? acts.filter((a) => a.d === heatSel) : []),
+    [acts, heatSel]
+  );
+
+  const insights = useMemo(
+    () => (index ? buildInsights(workouts, index) : []),
+    [workouts, index]
+  );
 
   const muscleRows = useMemo(() => {
     return Object.entries(usage)
@@ -99,7 +111,7 @@ export default function ProgressiPage() {
       .slice(0, 6);
   }, [usage]);
 
-  if (!workouts.length) {
+  if (!workouts.length && !acts.length) {
     return (
       <div className="flex flex-col gap-3.5">
         <h1 className="display card-in text-[30px]" style={{ "--i": 0 } as React.CSSProperties}>
@@ -141,21 +153,52 @@ export default function ProgressiPage() {
         ))}
       </div>
 
+      {insights.length > 0 && (
+        <Card className="card-in" style={{ "--i": 2 } as React.CSSProperties}>
+          <div className="mb-2.5 flex items-center gap-2">
+            <ChatCircleText size={17} weight="fill" color="var(--accent)" />
+            <h2 className="display text-[15px] text-ink-2">Consigli del coach</h2>
+          </div>
+          <div className="flex flex-col gap-2">
+            {insights.map((ins) => (
+              <div
+                key={ins.key}
+                className={`rounded-[13px] border px-3.5 py-3 ${
+                  ins.tone === "amber"
+                    ? "border-[rgba(251,191,36,0.3)] bg-amber-soft"
+                    : "border-line bg-surface-2"
+                }`}
+              >
+                <div className={`text-[13.5px] font-bold ${ins.tone === "amber" ? "text-amber" : ""}`}>
+                  {ins.title}
+                </div>
+                <p className="mt-0.5 text-[12.5px] leading-snug text-ink-2">{ins.body}</p>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+
       <Card className="card-in" style={{ "--i": 2 } as React.CSSProperties}>
         <h2 className="display mb-3 text-[15px] text-ink-2">Attività</h2>
         <Heatmap activity={activity} selected={heatSel} onSelect={setHeatSel} />
         {heatSel && (
           <div className="mt-2 rounded-[13px] bg-surface-2 p-3 text-[13px]">
             <span className="font-bold capitalize">{fmtShort(heatSel)}</span>
-            {selWorkouts.length ? (
-              selWorkouts.map((w) => (
-                <span key={w.id} className="text-ink-2">
-                  {" "}
-                  · {w.name}, {workoutSets(w)} serie,{" "}
-                  {fmtDuration(Math.round((w.end - w.start) / 60000))}
-                </span>
-              ))
-            ) : (
+            {selWorkouts.map((w) => (
+              <span key={w.id} className="text-ink-2">
+                {" "}
+                · {w.name}, {workoutSets(w)} serie,{" "}
+                {fmtDuration(Math.round((w.end - w.start) / 60000))}
+              </span>
+            ))}
+            {selActs.map((a) => (
+              <span key={a.id} className="text-ink-2">
+                {" "}
+                · {a.type} {fmtDuration(a.min)}{a.kcal ? `, ${a.kcal} kcal` : ""}
+              </span>
+            ))}
+            {!selWorkouts.length && !selActs.length && (
               <span className="text-ink-3"> · nessun allenamento</span>
             )}
           </div>
@@ -170,6 +213,42 @@ export default function ProgressiPage() {
           unit="kg"
         />
       </Card>
+
+      {acts.length > 0 && (
+        <Card className="card-in" style={{ "--i": 4 } as React.CSSProperties}>
+          <div className="mb-2.5 flex items-center gap-2">
+            <Watch size={17} weight="fill" color="var(--accent)" />
+            <h2 className="display text-[15px] text-ink-2">Da Apple Watch e dispositivi</h2>
+          </div>
+          <div className="mb-2 text-[12.5px] text-ink-3">
+            {acts.length} attività totali · già dentro heatmap, striscia della
+            settimana e minuti settimanali
+          </div>
+          <div className="flex flex-col gap-1.5">
+            {[...acts].slice(-5).reverse().map((a) => {
+              const Icon = /cors|run/i.test(a.type)
+                ? PersonSimpleRun
+                : /bici|ride|cycl/i.test(a.type)
+                  ? Bicycle
+                  : /nuoto|swim/i.test(a.type)
+                    ? SwimmingPool
+                    : Pulse;
+              return (
+                <div key={a.id} className="flex items-center gap-2.5 rounded-[12px] bg-surface-2 px-3 py-2">
+                  <Icon size={17} weight="bold" color="var(--accent)" className="shrink-0" />
+                  <span className="min-w-0 flex-1 truncate text-[13px] font-semibold">
+                    {a.name || a.type}
+                  </span>
+                  <span className="tnum shrink-0 text-[12px] text-ink-3">
+                    {fmtShort(a.d)} · {fmtDuration(a.min)}
+                    {a.kcal ? ` · ${a.kcal} kcal` : ""}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </Card>
+      )}
 
       {bwData.length >= 2 && (
         <Card className="card-in" style={{ "--i": 4 } as React.CSSProperties}>

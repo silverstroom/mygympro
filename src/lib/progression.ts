@@ -46,6 +46,12 @@ function topReps(sets: SetLog[]): number {
   return sets.reduce((m, s) => (s.done && (s.r ?? 0) > m ? (s.r as number) : m), 0);
 }
 
+function avgRir(sets: SetLog[]): number | null {
+  const vals = sets.filter((s) => s.done && s.rir != null).map((s) => s.rir as number);
+  if (!vals.length) return null;
+  return vals.reduce((a, b) => a + b, 0) / vals.length;
+}
+
 export function suggestFor(
   exId: string,
   history: Workout[],
@@ -87,6 +93,15 @@ export function suggestFor(
   const w = topWeight(last.sets);
 
   if (allClosed(last.sets, cfg.targetReps)) {
+    const rir = avgRir(last.sets);
+    if (rir != null && rir >= 2.5) {
+      const next = roundStep(w + STEP * 2);
+      return {
+        kind: "up",
+        weight: next,
+        why: `Tutte chiuse e con ${fmtNum(Math.round(rir * 10) / 10)} colpi in canna di media: doppio salto a ${fmtNum(next)} kg.`,
+      };
+    }
     const next = roundStep(w + STEP);
     return {
       kind: "up",

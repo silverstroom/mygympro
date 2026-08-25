@@ -6,6 +6,7 @@ import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import {
   ArrowRight,
   Barbell,
+  Timer as TimerIcon,
   CaretLeft,
   Check,
   Info,
@@ -29,13 +30,26 @@ import { fmtNum, fmtShort, todayISO, DAY_FULL, dayIdxOf } from "@/lib/dates";
 import { beep, vibrate } from "@/lib/sound";
 import { acquireWakeLock, releaseWakeLock } from "@/lib/wakelock";
 import { useStartSession } from "@/lib/useStartSession";
-import { Button, Card, Sheet, Tag, toast } from "@/components/ui";
+import { generateQuickWorkout } from "@/lib/quickwo";
+import type { Equip } from "@/lib/plangen";
+import { buildInsights } from "@/lib/insights";
+import { hypeForPR, hypeForSet, hypeForVolume, shouldHypeSet } from "@/lib/hype";
+import { buildSessionEntries } from "@/lib/session";
+import { Button, Card, Seg, Sheet, Tag, toast } from "@/components/ui";
 import Stepper from "@/components/Stepper";
 import { ExMedia } from "@/components/ExMedia";
 import ExercisePicker from "@/components/ExercisePicker";
 import Confetti from "@/components/Confetti";
 import CountUp from "@/components/CountUp";
 import { ROUTINE_ICONS } from "@/components/routineIcons";
+
+function tempoLabel(tempo: string): string {
+  const parts = tempo.split("-").map(Number);
+  if (parts.length === 3 && parts.every((n) => Number.isFinite(n))) {
+    return `${parts[0]}s in discesa, ${parts[1]}s fermo, ${parts[2]}s in salita`;
+  }
+  return "controlla ogni ripetizione";
+}
 
 function Elapsed({ start }: { start: number }) {
   const [txt, setTxt] = useState("0:00");
@@ -99,6 +113,74 @@ function SetField({
         <Plus size={13} weight="bold" />
       </button>
     </div>
+  );
+}
+
+function QuickCard() {
+  const router = useRouter();
+  const workouts = useStore((s) => s.workouts);
+  const exWeights = useStore((s) => s.exWeights);
+  const custom = useStore((s) => s.custom);
+  const startSession = useStore((s) => s.startSession);
+  const [minutes, setMinutes] = useState<15 | 30 | 45>(30);
+  const [equip, setEquip] = useState<Equip>("palestra");
+
+  const go = async () => {
+    try {
+      const index = await loadIndex();
+      const q = generateQuickWorkout(minutes, equip);
+      const entries = q.exercises.map((re) =>
+        buildEntry(re, workouts, exWeights, index, custom)
+      );
+      startSession(null, q.name, entries);
+      toast(q.note, "info");
+      router.push("/allenamento");
+    } catch {
+      toast("Impossibile preparare la sessione", "warn");
+    }
+  };
+
+  return (
+    <Card className="card-in" style={{ "--i": 3 } as React.CSSProperties}>
+      <div className="mb-1 flex items-center gap-2">
+        <TimerIcon size={17} weight="fill" color="var(--accent)" />
+        <h2 className="display text-[15px] text-ink-2">Sessione lampo</h2>
+      </div>
+      <p className="mb-3 text-[13px] leading-snug text-ink-2">
+        Poco tempo? Dimmi quanto ne hai e ti preparo un allenamento che ci sta
+        davvero, cronometro alla mano.
+      </p>
+      <div className="mb-2 flex gap-2">
+        {([15, 30, 45] as const).map((m) => (
+          <button
+            key={m}
+            onClick={() => setMinutes(m)}
+            className={`press flex-1 rounded-full border py-2 text-[13.5px] font-bold ${
+              minutes === m
+                ? "border-accent bg-accent-soft text-accent"
+                : "border-line bg-surface-2 text-ink-2"
+            }`}
+          >
+            {m} min
+          </button>
+        ))}
+      </div>
+      <div className="mb-3">
+        <Seg
+          options={[
+            { value: "palestra", label: "Palestra" },
+            { value: "manubri", label: "Manubri" },
+            { value: "corpo", label: "Corpo libero" },
+          ]}
+          value={equip}
+          onChange={setEquip}
+        />
+      </div>
+      <Button variant="primary" className="w-full" onClick={go}>
+        <Play size={17} weight="fill" />
+        Genera e parti
+      </Button>
+    </Card>
   );
 }
 
@@ -178,7 +260,9 @@ function StartChooser() {
         </div>
       )}
 
-      <div className="card-in flex flex-col gap-2" style={{ "--i": 3 } as React.CSSProperties}>
+      <QuickCard />
+
+      <div className="card-in flex flex-col gap-2" style={{ "--i": 4 } as React.CSSProperties}>
         <Button onClick={() => start(null)}>
           <Shuffle size={18} weight="bold" />
           Freestyle: scegli man mano
@@ -295,7 +379,7 @@ function CompleteView() {
         transition={{ type: "spring", duration: 0.65, bounce: 0.3 }}
         className="mb-6 flex flex-col items-center text-center"
       >
-        <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-accent shadow-[0_12px_40px_rgba(163,230,53,0.4)]">
+        <span className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-accent shadow-[0_12px_40px_var(--accent-glow)]">
           <Check size={34} weight="bold" color="var(--accent-ink)" />
         </span>
         <h1 className="display text-[32px]">Fatto!</h1>
@@ -323,6 +407,20 @@ function CompleteView() {
         ))}
       </div>
 
+      {(() => {
+        const line = hypeForVolume(summary.volume, useStore.getState().settings.goal);
+        return line ? (
+          <motion.div
+            initial={{ opacity: 0, y: 14 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.32, duration: 0.45, ease: [0.23, 1, 0.32, 1] }}
+            className="mb-4 rounded-[16px] border border-line bg-surface p-4 text-center text-[14px] font-semibold leading-relaxed"
+          >
+            {line}
+          </motion.div>
+        ) : null;
+      })()}
+
       {summary.prs.length > 0 && (
         <motion.div
           initial={{ opacity: 0, y: 14 }}
@@ -334,6 +432,7 @@ function CompleteView() {
             <Trophy size={18} weight="fill" />
             {summary.prs.length === 1 ? "Nuovo record personale" : `${summary.prs.length} nuovi record`}
           </div>
+          <div className="mb-1.5 text-[12.5px] font-medium text-amber">{hypeForPR()}</div>
           <PRList prs={summary.prs} />
         </motion.div>
       )}
@@ -448,6 +547,7 @@ function ActiveWorkout() {
   const exWeights = useStore((s) => s.exWeights);
   const settings = useStore((s) => s.settings);
   const bodyweight = useStore((s) => s.bodyweight);
+  const trackRir = !!settings.trackRir;
   const toggleSet = useStore((s) => s.toggleSet);
   const setField = useStore((s) => s.setField);
   const addSet = useStore((s) => s.addSet);
@@ -510,6 +610,11 @@ function ActiveWorkout() {
 
   const last = entry ? lastSetsFor(workouts, entry.exId) : null;
   const best = entry ? bestSetFor(workouts, entry.exId) : null;
+  const insights = useMemo(
+    () => (index ? buildInsights(workouts, index) : []),
+    [workouts, index]
+  );
+  const exInsight = entry ? insights.find((i) => i.exId === entry.exId) : null;
 
   const sessionMuscles = useMemo(() => {
     if (!index) return [];
@@ -538,6 +643,15 @@ function ActiveWorkout() {
     if (nowDone) {
       beep(settings.sound, 1040, 0.1);
       vibrate(28);
+      const doneSet = nowActive.entries[cur].sets[si];
+      if (
+        entry.mode === "reps" &&
+        doneSet.w != null &&
+        shouldHypeSet(doneSet.w, doneSet.r ?? 0)
+      ) {
+        const line = hypeForSet(doneSet.w);
+        if (line) toast(line);
+      }
       const totalNow = nowActive.entries.reduce((n, e) => n + e.sets.length, 0);
       const doneNow = nowActive.entries.reduce(
         (n, e) => n + e.sets.filter((x) => x.done).length,
@@ -702,11 +816,25 @@ function ActiveWorkout() {
                 </div>
               )}
 
+              {entry.tempo && (
+                <div className="flex items-start gap-2.5 rounded-[13px] border border-line bg-surface-2 px-3.5 py-2.5 text-[13px] font-medium leading-snug text-ink-2">
+                  <TimerIcon size={17} weight="bold" className="mt-0.5 shrink-0" color="var(--text-3)" />
+                  Esecuzione {entry.tempo}: {tempoLabel(entry.tempo)}
+                </div>
+              )}
+
+              {exInsight && (
+                <div className="flex items-start gap-2.5 rounded-[13px] border border-[rgba(251,191,36,0.3)] bg-amber-soft px-3.5 py-2.5 text-[13px] font-medium leading-snug text-amber">
+                  <Lightbulb size={17} weight="fill" className="mt-0.5 shrink-0" />
+                  {exInsight.body}
+                </div>
+              )}
+
               {entry.suggestion && entry.suggestion.kind !== "start" && (
                 <div
                   className={`flex items-start gap-2.5 rounded-[13px] border px-3.5 py-2.5 text-[13px] font-medium leading-snug ${
                     entry.suggestion.kind === "up" || entry.suggestion.kind === "reps"
-                      ? "border-[rgba(163,230,53,0.3)] bg-accent-soft text-accent"
+                      ? "border-[rgba(56,189,248,0.3)] bg-accent-soft text-accent"
                       : entry.suggestion.kind === "deload"
                         ? "border-[rgba(251,191,36,0.3)] bg-amber-soft text-amber"
                         : "border-line bg-surface-2 text-ink-2"
@@ -724,33 +852,44 @@ function ActiveWorkout() {
               )}
 
               <Card className="p-3">
-                <div className="mb-1 grid grid-cols-[26px_1fr_1fr_46px] items-center gap-2 px-1 text-center text-[10.5px] font-bold uppercase tracking-wide text-ink-3">
-                  <span>#</span>
-                  {entry.mode === "cardio" ? (
-                    <>
-                      <span>Minuti</span>
-                      <span>km/h</span>
-                    </>
-                  ) : entry.mode === "time" ? (
-                    <>
-                      <span>Secondi</span>
-                      <span>Zavorra kg</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>{entry.sets.some((s) => s.w != null) ? "Kg" : "Solo corpo"}</span>
-                      <span>Reps</span>
-                    </>
-                  )}
-                  <span />
-                </div>
+                {(() => {
+                  const rirOn = trackRir && entry.mode === "reps";
+                  const gridCls = rirOn
+                    ? "grid-cols-[22px_1fr_1fr_74px_44px]"
+                    : "grid-cols-[26px_1fr_1fr_46px]";
+                  return (
+                    <div className={`mb-1 grid items-center gap-2 px-1 text-center text-[10.5px] font-bold uppercase tracking-wide text-ink-3 ${gridCls}`}>
+                      <span>#</span>
+                      {entry.mode === "cardio" ? (
+                        <>
+                          <span>Minuti</span>
+                          <span>km/h</span>
+                        </>
+                      ) : entry.mode === "time" ? (
+                        <>
+                          <span>Secondi</span>
+                          <span>Zavorra kg</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>{entry.sets.some((s) => s.w != null) ? "Kg" : "Solo corpo"}</span>
+                          <span>Reps</span>
+                        </>
+                      )}
+                      {rirOn && <span>RIR</span>}
+                      <span />
+                    </div>
+                  );
+                })()}
                 <div className="flex flex-col gap-1.5">
                   {entry.sets.map((s: SetLog, si) => (
                     <div
                       key={si}
-                      className={`grid grid-cols-[26px_1fr_1fr_46px] items-center gap-2 rounded-[12px] p-1 transition-colors duration-300 ${
-                        s.done ? "bg-accent-soft" : ""
-                      }`}
+                      className={`grid items-center gap-2 rounded-[12px] p-1 transition-colors duration-300 ${
+                        trackRir && entry.mode === "reps"
+                          ? "grid-cols-[22px_1fr_1fr_74px_44px]"
+                          : "grid-cols-[26px_1fr_1fr_46px]"
+                      } ${s.done ? "bg-accent-soft" : ""}`}
                     >
                       <span
                         className={`tnum text-center text-[13.5px] font-bold ${
@@ -828,6 +967,26 @@ function ActiveWorkout() {
                             disabled={s.done}
                           />
                         </>
+                      )}
+                      {trackRir && entry.mode === "reps" && (
+                        <button
+                          disabled={s.done}
+                          onClick={() =>
+                            setField(
+                              cur,
+                              si,
+                              "rir",
+                              s.rir == null ? 2 : s.rir >= 5 ? undefined : s.rir + 1
+                            )
+                          }
+                          className={`press tnum h-10 rounded-[10px] border text-[13.5px] font-bold ${
+                            s.rir != null
+                              ? "border-accent bg-accent-soft text-accent"
+                              : "border-line bg-surface-2 text-ink-3"
+                          } ${s.done ? "opacity-45" : ""}`}
+                        >
+                          {s.rir != null ? s.rir : "-"}
+                        </button>
                       )}
                       <motion.button
                         aria-label={s.done ? "Serie completata" : "Completa serie"}

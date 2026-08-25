@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowDown,
@@ -8,16 +9,21 @@ import {
   ArrowUp,
   Barbell,
   CalendarBlank,
+  CheckCircle,
+  CompassRose,
   Flame,
   GearSix,
   Lightning,
   MoonStars,
   Play,
   Plus,
+  Scales,
   Sparkle,
   Target,
+  Timer,
 } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
+import { currentAccount } from "@/lib/auth";
 import { addDays, DAY_FULL, fmtLong, fmtNum, fmtShort, mondayOf, todayISO, weekKeyOf, dayIdxOf } from "@/lib/dates";
 import { streakWeeks } from "@/lib/calc";
 import { effectiveRoutineId } from "@/lib/session";
@@ -28,105 +34,126 @@ import { LineChart } from "@/components/charts";
 import { Button, Card, Chip, Seg, Sheet, toast } from "@/components/ui";
 import Stepper from "@/components/Stepper";
 import { ROUTINE_ICONS } from "@/components/routineIcons";
+import PlanWizard from "@/components/PlanWizard";
+import { nextStep } from "@/lib/coach";
 
-function Onboarding() {
-  const [name, setName] = useState("");
-  const setSettings = useStore((s) => s.setSettings);
+function Onboarding({ accName }: { accName: string }) {
   const setOnboarded = useStore((s) => s.setOnboarded);
-  const saveRoutine = useStore((s) => s.saveRoutine);
-  const assignDay = useStore((s) => s.assignDay);
   const loadState = useStore((s) => s.loadState);
 
-  const finish = (mode: "ppl" | "empty" | "demo") => {
-    if (mode === "demo") {
-      const st = buildDemoState();
-      if (name.trim()) st.settings.name = name.trim();
-      loadState(st, true);
-      toast("Dati demo caricati: esplora liberamente");
-      return;
-    }
-    if (name.trim()) setSettings({ name: name.trim() });
-    if (mode === "ppl") {
-      STARTER_PPL.forEach(saveRoutine);
-      STARTER_WEEK.forEach((r, i) => assignDay(i, r));
-      toast("Piano Push / Pull / Legs pronto");
-    }
-    setOnboarded();
-  };
-
   return (
-    <div className="flex min-h-[80dvh] flex-col justify-center py-8">
-      <div className="card-in mb-8" style={{ "--i": 0 } as React.CSSProperties}>
-        <span className="mb-5 flex h-14 w-14 items-center justify-center rounded-2xl bg-accent shadow-[0_10px_34px_rgba(163,230,53,0.35)]">
-          <Barbell size={30} weight="bold" color="var(--accent-ink)" />
-        </span>
-        <h1 className="display text-[38px] leading-none">
-          MyGym<span className="text-accent">Pro</span>
+    <div className="flex flex-col">
+      <div className="card-in mb-1" style={{ "--i": 0 } as React.CSSProperties}>
+        <h1 className="display text-[30px]">
+          {accName ? `Ciao, ${accName}` : "Benvenuto"}
         </h1>
-        <p className="mt-3 max-w-[300px] text-[15px] leading-relaxed text-ink-2">
-          Piano settimanale, workout guidati e progressi che si vedono. Tutto
-          sul tuo telefono, tutto tuo.
+        <p className="mt-1 text-[14px] leading-relaxed text-ink-2">
+          Quattro domande e ti preparo la settimana giusta per te.
         </p>
       </div>
-
-      <div className="card-in mb-6" style={{ "--i": 1 } as React.CSSProperties}>
-        <label className="mb-1.5 block text-[13px] font-semibold text-ink-2">
-          Come ti chiami?
-        </label>
-        <input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Il tuo nome (facoltativo)"
-          className="h-12 w-full rounded-[12px] border border-line bg-surface-2 px-4 text-[15px] outline-none transition-colors placeholder:text-ink-3 focus:border-accent"
-        />
+      <PlanWizard />
+      <div className="mt-2 flex flex-col gap-2 border-t border-line pt-4">
+        <button
+          onClick={() => {
+            setOnboarded();
+            toast("Profilo pronto: costruisci il piano quando vuoi");
+          }}
+          className="press rounded-full px-4 py-2.5 text-[13px] font-semibold text-ink-2 hover:text-ink"
+        >
+          Salta: preferisco fare da solo
+        </button>
+        <button
+          onClick={() => {
+            loadState(buildDemoState(), true);
+            toast("Dati demo caricati: esplora liberamente");
+          }}
+          className="press flex items-center justify-center gap-1.5 rounded-full px-4 py-2.5 text-[13px] font-semibold text-ink-2 hover:text-ink"
+        >
+          <Sparkle size={15} weight="fill" color="var(--amber)" />
+          Guarda prima la demo
+        </button>
       </div>
+    </div>
+  );
+}
 
-      <div className="flex flex-col gap-3">
-        {[
-          {
-            icon: <Lightning size={22} weight="fill" color="var(--accent-ink)" />,
-            title: "Parti col piano pronto",
-            sub: "Push / Pull / Legs, 3 giorni a settimana. Lo adatti quando vuoi.",
-            cta: () => finish("ppl"),
-            primary: true,
-          },
-          {
-            icon: <Plus size={22} weight="bold" color="var(--text)" />,
-            title: "Costruisci da zero",
-            sub: "Crea le tue schede sulla libreria di 1.324 esercizi.",
-            cta: () => finish("empty"),
-          },
-          {
-            icon: <Sparkle size={22} weight="fill" color="var(--amber)" />,
-            title: "Prova con dati demo",
-            sub: "14 settimane di storia finta per vedere subito grafici e statistiche.",
-            cta: () => finish("demo"),
-          },
-        ].map((c, i) => (
-          <button
-            key={c.title}
-            onClick={c.cta}
-            style={{ "--i": 2 + i } as React.CSSProperties}
-            className={`card-in press flex w-full items-center gap-4 rounded-[16px] border p-4 text-left ${
-              c.primary
-                ? "border-accent bg-accent-soft"
-                : "border-line bg-surface hover:border-line-strong"
-            }`}
-          >
-            <span
-              className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-[13px] ${
-                c.primary ? "bg-accent" : "bg-surface-3"
+const COACH_ICONS: Record<string, React.ReactNode> = {
+  resume: <Timer size={20} weight="fill" />,
+  plan: <CompassRose size={20} weight="fill" />,
+  first: <Play size={20} weight="fill" />,
+  "first-rest": <Play size={20} weight="fill" />,
+  today: <Play size={20} weight="fill" />,
+  bw: <Scales size={20} weight="bold" />,
+  "bw-stale": <Scales size={20} weight="bold" />,
+  goal: <Target size={20} weight="bold" />,
+  week: <CalendarBlank size={20} weight="bold" />,
+  done: <CheckCircle size={20} weight="fill" />,
+  rest: <MoonStars size={20} weight="fill" />,
+};
+
+function CoachCard({
+  onPeso,
+  onObiettivo,
+}: {
+  onPeso: () => void;
+  onObiettivo: () => void;
+}) {
+  const router = useRouter();
+  const routines = useStore((s) => s.routines);
+  const week = useStore((s) => s.week);
+  const overrides = useStore((s) => s.overrides);
+  const workouts = useStore((s) => s.workouts);
+  const bodyweight = useStore((s) => s.bodyweight);
+  const goalWeight = useStore((s) => s.goalWeight);
+  const active = useStore((s) => s.active);
+
+  const step = nextStep({ routines, week, overrides, workouts, bodyweight, goalWeight, active });
+
+  const go = () => {
+    if (step.action === "piano") router.push("/piano?wizard=1");
+    else if (step.action === "allenamento") router.push("/allenamento");
+    else if (step.action === "peso") onPeso();
+    else if (step.action === "obiettivo") onObiettivo();
+  };
+
+  const toneCls =
+    step.tone === "accent"
+      ? "border-[color:var(--accent)] bg-accent-soft"
+      : step.tone === "amber"
+        ? "border-[rgba(251,191,36,0.3)] bg-amber-soft"
+        : "border-line bg-surface";
+  const iconCls =
+    step.tone === "accent"
+      ? "bg-accent text-accent-ink"
+      : step.tone === "amber"
+        ? "bg-amber text-[#1d1607]"
+        : "bg-surface-3 text-ink-2";
+
+  return (
+    <div className={`card-in rounded-[16px] border p-4 ${toneCls}`} style={{ "--i": 2 } as React.CSSProperties}>
+      <div className="flex items-start gap-3">
+        <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${iconCls}`}>
+          {COACH_ICONS[step.key] ?? <CompassRose size={20} weight="fill" />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="mb-0.5 flex items-center gap-2">
+            <span className="text-[11px] font-bold uppercase tracking-wide text-ink-3">
+              Prossimo passo
+            </span>
+          </div>
+          <div className="text-[15px] font-bold leading-tight">{step.title}</div>
+          <p className="mt-0.5 text-[12.5px] leading-snug text-ink-2">{step.body}</p>
+          {step.cta && (
+            <button
+              onClick={go}
+              className={`press mt-2.5 rounded-full px-4 py-2 text-[12.5px] font-bold ${
+                step.tone === "amber" ? "bg-amber text-[#1d1607]" : "bg-accent text-accent-ink"
               }`}
             >
-              {c.icon}
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="block text-[15.5px] font-bold">{c.title}</span>
-              <span className="block text-[13px] leading-snug text-ink-2">{c.sub}</span>
-            </span>
-            <ArrowRight size={18} color="var(--text-3)" />
-          </button>
-        ))}
+              {step.cta}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -136,9 +163,13 @@ function WeekStrip({ onDayTap }: { onDayTap: (iso: string) => void }) {
   const week = useStore((s) => s.week);
   const overrides = useStore((s) => s.overrides);
   const workouts = useStore((s) => s.workouts);
+  const activities = useStore((s) => s.activities);
   const today = todayISO();
   const monday = mondayOf(today);
-  const doneDays = useMemo(() => new Set(workouts.map((w) => w.d)), [workouts]);
+  const doneDays = useMemo(
+    () => new Set([...workouts.map((w) => w.d), ...(activities ?? []).map((a) => a.d)]),
+    [workouts, activities]
+  );
 
   return (
     <div className="grid grid-cols-7 gap-1">
@@ -182,7 +213,7 @@ function WeekStrip({ onDayTap }: { onDayTap: (iso: string) => void }) {
 
 export default function Home() {
   const onboarded = useStore((s) => s.onboarded);
-  const settings = useStore((s) => s.settings);
+  const [accName, setAccName] = useState("");
   const routines = useStore((s) => s.routines);
   const week = useStore((s) => s.week);
   const overrides = useStore((s) => s.overrides);
@@ -191,6 +222,7 @@ export default function Home() {
   const goalWeight = useStore((s) => s.goalWeight);
   const active = useStore((s) => s.active);
   const demo = useStore((s) => s.demo);
+  const settingsHeight = useStore((s) => s.settings.height);
   const logBodyweight = useStore((s) => s.logBodyweight);
   const setGoal = useStore((s) => s.setGoal);
   const setOverride = useStore((s) => s.setOverride);
@@ -205,6 +237,10 @@ export default function Home() {
   const [dayOpen, setDayOpen] = useState<string | null>(null);
   const [dayScope, setDayScope] = useState<"once" | "always">("once");
 
+  useEffect(() => {
+    setAccName(currentAccount()?.name ?? "");
+  }, []);
+
   const today = todayISO();
   const todayRid = effectiveRoutineId({ week, overrides }, today);
   const todayRoutine = routines.find((r) => r.id === todayRid) ?? null;
@@ -215,7 +251,8 @@ export default function Home() {
     goalWeight != null && lastBW && prevBW
       ? Math.abs(lastBW.w - goalWeight) <= Math.abs(prevBW.w - goalWeight)
       : delta <= 0;
-  const streak = streakWeeks(workouts);
+  const activities = useStore((s) => s.activities);
+  const streak = streakWeeks(workouts, activities ?? []);
   const wThisWeek = useMemo(
     () => workouts.filter((w) => weekKeyOf(w.d) === weekKeyOf(today)).length,
     [workouts, today]
@@ -226,7 +263,7 @@ export default function Home() {
     [bodyweight]
   );
 
-  if (!onboarded) return <Onboarding />;
+  if (!onboarded) return <Onboarding accName={accName} />;
 
   const hour = new Date().getHours();
   const greet = hour < 5 ? "Notte fonda" : hour < 13 ? "Buongiorno" : hour < 18 ? "Buon allenamento" : "Buonasera";
@@ -254,7 +291,7 @@ export default function Home() {
         <div>
           <h1 className="display text-[30px]">
             {greet}
-            {settings.name ? `, ${settings.name}` : ""}
+            {accName ? `, ${accName}` : ""}
           </h1>
           <div className="mt-1 text-[13.5px] capitalize text-ink-2">{fmtLong(today)}</div>
         </div>
@@ -333,7 +370,18 @@ export default function Home() {
         </Card>
       )}
 
-      <Card className="card-in" style={{ "--i": 2 } as React.CSSProperties}>
+      <CoachCard
+        onPeso={() => {
+          setBwVal(lastBW?.w ?? 75);
+          setBwOpen(true);
+        }}
+        onObiettivo={() => {
+          setGoalVal(goalWeight ?? lastBW?.w ?? 75);
+          setGoalOpen(true);
+        }}
+      />
+
+      <Card className="card-in" style={{ "--i": 3 } as React.CSSProperties}>
         <div className="mb-2 flex items-center justify-between">
           <h2 className="display text-[15px] text-ink-2">Peso corporeo</h2>
           <div className="flex gap-2">
@@ -373,6 +421,11 @@ export default function Home() {
                   {fmtNum(Math.abs(delta))}
                 </span>
               )}
+              {settingsHeight != null && settingsHeight > 0 && (
+                <span className="rounded-full bg-surface-2 px-2 py-0.5 text-[11px] font-bold text-ink-2">
+                  BMI {fmtNum(Math.round((lastBW.w / Math.pow(settingsHeight / 100, 2)) * 10) / 10)}
+                </span>
+              )}
               <span className="ml-auto text-[12px] text-ink-3">{fmtShort(lastBW.d)}</span>
             </div>
             {goalWeight != null && (
@@ -394,7 +447,7 @@ export default function Home() {
         )}
       </Card>
 
-      <Card className="card-in" style={{ "--i": 3 } as React.CSSProperties}>
+      <Card className="card-in" style={{ "--i": 4 } as React.CSSProperties}>
         <div className="flex items-center justify-between">
           <div>
             <div className="flex items-center gap-2">
@@ -414,6 +467,7 @@ export default function Home() {
               {wThisWeek}
               {planned ? ` su ${planned}` : ""} questa settimana · {workouts.length}{" "}
               {workouts.length === 1 ? "workout totale" : "workout totali"}
+              {(activities ?? []).length > 0 ? ` · ${(activities ?? []).length} da dispositivi` : ""}
             </div>
           </div>
           <Link

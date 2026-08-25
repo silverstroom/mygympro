@@ -3,7 +3,17 @@
 import { useEffect, useRef } from "react";
 import { useReducedMotion } from "motion/react";
 
-const COLORS = ["#a3e635", "#bef264", "#fbbf24", "#f4f4f5", "#84cc16"];
+function themeColors(): string[] {
+  const st = getComputedStyle(document.documentElement);
+  const v = (k: string, fb: string) => st.getPropertyValue(k).trim() || fb;
+  return [
+    v("--accent", "#38bdf8"),
+    v("--accent-strong", "#7dd3fc"),
+    "#fbbf24",
+    "#f4f4f5",
+    v("--accent-dim", "#0ea5e9"),
+  ];
+}
 
 export default function Confetti({ fire }: { fire: boolean }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -16,6 +26,7 @@ export default function Confetti({ fire }: { fire: boolean }) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    const colors = themeColors();
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const w = window.innerWidth;
     const h = window.innerHeight;
@@ -31,7 +42,7 @@ export default function Confetti({ fire }: { fire: boolean }) {
       s: 4 + Math.random() * 5,
       rot: Math.random() * Math.PI,
       vr: (Math.random() - 0.5) * 0.3,
-      c: COLORS[Math.floor(Math.random() * COLORS.length)],
+      c: colors[Math.floor(Math.random() * colors.length)],
     }));
 
     let raf = 0;

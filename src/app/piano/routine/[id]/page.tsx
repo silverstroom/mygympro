@@ -27,7 +27,7 @@ function kgen(): string {
 function cfgLabel(re: RoutineExercise): string {
   if (re.mode === "cardio") return `${re.min ?? 20} min · ${re.speed ?? 8} km/h`;
   if (re.mode === "time") return `${re.sets} × ${re.sec ?? 45}s · ${re.restSec}s riposo`;
-  return `${re.sets} × ${re.reps} · ${re.restSec}s riposo`;
+  return `${re.sets} × ${re.reps} · ${re.restSec}s riposo${re.tempo ? ` · tempo ${re.tempo}` : ""}`;
 }
 
 function CfgSheet({
@@ -50,6 +50,7 @@ function CfgSheet({
   const [sec, setSec] = useState(45);
   const [min, setMin] = useState(20);
   const [speed, setSpeed] = useState(8);
+  const [tempo, setTempo] = useState("");
 
   useEffect(() => {
     if (initial && open) {
@@ -60,6 +61,7 @@ function CfgSheet({
       setSec(initial.sec ?? 45);
       setMin(initial.min ?? 20);
       setSpeed(initial.speed ?? 8);
+      setTempo(initial.tempo ?? "");
     }
   }, [initial, open]);
 
@@ -82,7 +84,22 @@ function CfgSheet({
             <Stepper label="Serie" value={sets} onChange={setSets} min={1} max={10} />
             <Stepper label="Ripetizioni" value={reps} onChange={setReps} min={1} max={50} />
             <div className="col-span-2">
-              <Stepper label="Riposo (secondi)" value={rest} onChange={setRest} step={15} min={15} max={600} wide />
+              <Stepper label="Riposo tra le serie (secondi)" value={rest} onChange={setRest} step={15} min={15} max={600} wide />
+            </div>
+            <div className="col-span-2">
+              <div className="mb-1 text-center text-[11px] font-semibold uppercase tracking-wide text-ink-3">
+                Tempo di esecuzione (giù-fermo-su)
+              </div>
+              <Seg
+                options={[
+                  { value: "", label: "Libero" },
+                  { value: "2-1-2", label: "2-1-2" },
+                  { value: "3-1-3", label: "3-1-3" },
+                  { value: "1-0-1", label: "1-0-1" },
+                ]}
+                value={tempo}
+                onChange={setTempo}
+              />
             </div>
           </div>
         )}
@@ -113,6 +130,7 @@ function CfgSheet({
               sec: mode === "time" ? sec : initial.sec,
               min: mode === "cardio" ? min : initial.min,
               speed: mode === "cardio" ? speed : initial.speed,
+              tempo: mode === "reps" && tempo ? tempo : undefined,
             });
             onClose();
           }}

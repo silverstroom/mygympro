@@ -132,5 +132,6 @@ export function buildDemoState(): AppState {
     active: null,
     demo: true,
     onboarded: true,
+    activities: [],
   };
 }

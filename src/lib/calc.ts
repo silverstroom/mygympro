@@ -1,4 +1,4 @@
-import type { Workout, ExerciseIndex, PR, SetLog } from "./types";
+import type { Activity, Workout, ExerciseIndex, PR, SetLog } from "./types";
 import { addDays, diffDays, mondayOf, todayISO, weekKeyOf } from "./dates";
 
 export function e1rm(w: number, r: number): number {
@@ -72,7 +72,11 @@ export interface WeekStat {
   minutes: number;
 }
 
-export function weeklyStats(workouts: Workout[], nWeeks: number): WeekStat[] {
+export function weeklyStats(
+  workouts: Workout[],
+  nWeeks: number,
+  activities: Activity[] = []
+): WeekStat[] {
   const thisMonday = mondayOf(todayISO());
   const out: WeekStat[] = [];
   for (let i = nWeeks - 1; i >= 0; i--) {
@@ -93,12 +97,19 @@ export function weeklyStats(workouts: Workout[], nWeeks: number): WeekStat[] {
     stat.sets += workoutSets(w);
     stat.minutes += Math.max(0, Math.round((w.end - w.start) / 60000));
   }
+  for (const a of activities) {
+    const stat = byMonday.get(weekKeyOf(a.d));
+    if (stat) stat.minutes += a.min;
+  }
   return out;
 }
 
-export function streakWeeks(workouts: Workout[]): number {
-  if (!workouts.length) return 0;
-  const weeks = new Set(workouts.map((w) => weekKeyOf(w.d)));
+export function streakWeeks(workouts: Workout[], activities: Activity[] = []): number {
+  if (!workouts.length && !activities.length) return 0;
+  const weeks = new Set([
+    ...workouts.map((w) => weekKeyOf(w.d)),
+    ...activities.map((a) => weekKeyOf(a.d)),
+  ]);
   const thisMonday = mondayOf(todayISO());
   let streak = 0;
   let cursor = thisMonday;
@@ -110,11 +121,17 @@ export function streakWeeks(workouts: Workout[]): number {
   return streak;
 }
 
-export function activityMinutes(workouts: Workout[]): Record<string, number> {
+export function activityMinutes(
+  workouts: Workout[],
+  activities: Activity[] = []
+): Record<string, number> {
   const out: Record<string, number> = {};
   for (const w of workouts) {
     const min = Math.max(0, Math.round((w.end - w.start) / 60000));
     out[w.d] = (out[w.d] ?? 0) + min;
+  }
+  for (const a of activities) {
+    out[a.d] = (out[a.d] ?? 0) + a.min;
   }
   return out;
 }

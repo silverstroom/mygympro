@@ -4,6 +4,7 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type {
   ActiveSession,
+  Activity,
   AppState,
   BodyWeight,
   CustomExercise,
@@ -16,6 +17,7 @@ import type {
 } from "./types";
 import { detectPRs, workoutSets, workoutVolume } from "./calc";
 import { todayISO } from "./dates";
+import { getSession, userStorageKey } from "./auth";
 
 function uid(): string {
   if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
@@ -44,6 +46,7 @@ const initial: AppState = {
   active: null,
   demo: false,
   onboarded: false,
+  activities: [],
 };
 
 export interface Store extends AppState {
@@ -77,6 +80,8 @@ export interface Store extends AppState {
   adjustRest: (delta: number) => void;
   stopRest: () => void;
   setSettings: (s: Partial<Settings>) => void;
+  addActivities: (items: Activity[], bws: { d: string; w: number }[]) => { added: number; weights: number };
+  clearActivities: () => void;
   setOnboarded: () => void;
   loadState: (s: AppState, demo: boolean) => void;
   resetAll: () => void;
@@ -318,6 +323,33 @@ export const useStore = create<Store>()(
       setSettings: (p) =>
         set((s) => ({ settings: { ...s.settings, ...p } })),
 
+      addActivities: (items, bws) => {
+        let added = 0;
+        let weights = 0;
+        set((s) => {
+          const existing = new Set((s.activities ?? []).map((a) => a.id));
+          const fresh = items.filter((a) => !existing.has(a.id));
+          added = fresh.length;
+          const byDay = new Map(s.bodyweight.map((b) => [b.d, b.w]));
+          for (const b of bws) {
+            if (!byDay.has(b.d)) {
+              byDay.set(b.d, b.w);
+              weights++;
+            }
+          }
+          const bodyweight = [...byDay.entries()]
+            .map(([d, w]) => ({ d, w }))
+            .sort((a, b) => (a.d < b.d ? -1 : 1));
+          const activities = [...(s.activities ?? []), ...fresh].sort((a, b) =>
+            a.d < b.d ? -1 : 1
+          );
+          return { activities, bodyweight };
+        });
+        return { added, weights };
+      },
+
+      clearActivities: () => set({ activities: [] }),
+
       setOnboarded: () => set({ onboarded: true }),
 
       loadState: (ns, demo) =>
@@ -334,6 +366,7 @@ export const useStore = create<Store>()(
           active: null,
           demo,
           onboarded: true,
+          activities: ns.activities ?? [],
           lastSummary: null,
         }),
 
@@ -341,8 +374,22 @@ export const useStore = create<Store>()(
     }),
     {
       name: "mygympro-v1",
-      storage: createJSONStorage(() => localStorage),
+      storage: createJSONStorage(() => ({
+        getItem: () => {
+          const sess = getSession();
+          return sess ? localStorage.getItem(userStorageKey(sess.id)) : null;
+        },
+        setItem: (_k: string, v: string) => {
+          const sess = getSession();
+          if (sess) localStorage.setItem(userStorageKey(sess.id), v);
+        },
+        removeItem: () => {
+          const sess = getSession();
+          if (sess) localStorage.removeItem(userStorageKey(sess.id));
+        },
+      })),
       partialize: (s) => ({
+        activities: s.activities,
         routines: s.routines,
         week: s.week,
         overrides: s.overrides,
@@ -366,6 +413,7 @@ export const useStore = create<Store>()(
 export function exportJSON(): string {
   const s = useStore.getState();
   const data: AppState = {
+    activities: s.activities,
     routines: s.routines,
     week: s.week,
     overrides: s.overrides,

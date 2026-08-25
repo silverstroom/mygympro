@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Barbell,
   CaretRight,
+  CompassRose,
   Lightning,
   MoonStars,
   Plus,
@@ -14,6 +15,7 @@ import { DAY_FULL } from "@/lib/dates";
 import { STARTER_PPL, STARTER_WEEK } from "@/lib/starter";
 import { Button, Card, Sheet, toast } from "@/components/ui";
 import { ROUTINE_ICONS } from "@/components/routineIcons";
+import PlanWizard from "@/components/PlanWizard";
 
 function uid(): string {
   return "r_" + Math.random().toString(36).slice(2, 9);
@@ -26,6 +28,14 @@ export default function PianoPage() {
   const assignDay = useStore((s) => s.assignDay);
   const saveRoutine = useStore((s) => s.saveRoutine);
   const [pickDay, setPickDay] = useState<number | null>(null);
+  const [showWizard, setShowWizard] = useState(false);
+
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has("wizard")) {
+      setShowWizard(true);
+      window.history.replaceState(null, "", "/piano");
+    }
+  }, []);
 
   const newRoutine = () => {
     const id = uid();
@@ -38,6 +48,15 @@ export default function PianoPage() {
     STARTER_WEEK.forEach((r, i) => assignDay(i, r));
     toast("Piano Push / Pull / Legs caricato");
   };
+
+  if (showWizard) {
+    return (
+      <PlanWizard
+        onClose={() => setShowWizard(false)}
+        onApplied={() => setShowWizard(false)}
+      />
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3.5">
@@ -98,15 +117,21 @@ export default function PianoPage() {
             Parti dal classico Push / Pull / Legs in un tocco, oppure crea la
             tua prima scheda da zero.
           </p>
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <Button variant="primary" onClick={loadStarter} className="flex-1">
-              <Lightning size={17} weight="fill" />
-              Carica PPL
+          <div className="flex flex-col gap-2">
+            <Button variant="primary" onClick={() => setShowWizard(true)}>
+              <CompassRose size={17} weight="fill" />
+              Percorso guidato
             </Button>
-            <Button onClick={newRoutine} className="flex-1">
-              <Plus size={17} weight="bold" />
-              Crea da zero
-            </Button>
+            <div className="flex gap-2">
+              <Button onClick={loadStarter} className="flex-1">
+                <Lightning size={17} weight="fill" />
+                PPL pronto
+              </Button>
+              <Button onClick={newRoutine} className="flex-1">
+                <Plus size={17} weight="bold" />
+                Da zero
+              </Button>
+            </div>
           </div>
         </Card>
       )}
@@ -144,6 +169,16 @@ export default function PianoPage() {
           );
         })}
       </div>
+
+      {routines.length > 0 && (
+        <button
+          onClick={() => setShowWizard(true)}
+          className="press flex items-center justify-center gap-2 rounded-full border border-line bg-surface-2 px-5 py-3 text-[13.5px] font-semibold text-ink-2 hover:text-ink"
+        >
+          <CompassRose size={16} weight="fill" color="var(--accent)" />
+          Rigenera il piano col percorso guidato
+        </button>
+      )}
 
       <Sheet
         open={pickDay != null}

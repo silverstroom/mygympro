@@ -29,6 +29,7 @@ export interface RoutineExercise {
   sec?: number;
   min?: number;
   speed?: number;
+  tempo?: string;
   k?: string;
 }
 
@@ -45,6 +46,7 @@ export interface SetLog {
   sec?: number;
   min?: number;
   speed?: number;
+  rir?: number;
   done: boolean;
 }
 
@@ -62,6 +64,7 @@ export interface SessionEntry {
   restSec: number;
   sets: SetLog[];
   suggestion: Suggestion | null;
+  tempo?: string;
 }
 
 export interface ActiveSession {
@@ -110,6 +113,22 @@ export interface Settings {
   sound: boolean;
   wakeLock: boolean;
   weighAsk: boolean;
+  accent?: string;
+  bg?: string;
+  height?: number | null;
+  trackRir?: boolean;
+  goal?: string;
+  level?: string;
+}
+
+export interface Activity {
+  id: string;
+  d: string;
+  type: string;
+  min: number;
+  kcal?: number;
+  name?: string;
+  source: "apple" | "csv";
 }
 
 export interface SessionSummary {
@@ -134,4 +153,5 @@ export interface AppState {
   active: ActiveSession | null;
   demo: boolean;
   onboarded: boolean;
+  activities: Activity[];
 }
