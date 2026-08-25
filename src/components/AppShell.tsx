@@ -31,6 +31,7 @@ import RestTimer from "@/components/RestTimer";
 import AuthScreen from "@/components/AuthScreen";
 import { Toasts } from "@/components/ui";
 import SignupPrompt, { useSignup } from "@/components/SignupPrompt";
+import CoachChat from "@/components/CoachChat";
 import { applyTheme } from "@/lib/themes";
 
 function ThemeApplier() {
@@ -113,6 +114,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     return () => clearTimeout(t);
   }, [authed, viewer?.guest]);
 
+  const guestBar = authed && !!viewer?.guest && !impersonator && !active?.restUntil;
+
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--bottom-stack",
+      guestBar ? "48px" : "0px"
+    );
+  }, [guestBar]);
+
   const doneSets = active
     ? active.entries.reduce((n, e) => n + e.sets.filter((x) => x.done).length, 0)
     : 0;
@@ -170,26 +180,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        {authed && viewer?.guest && !impersonator && (
-          <div className="sticky top-0 z-40 border-b border-[color:var(--accent-soft)] bg-[color:var(--bg)]">
-            <div
-              className="mx-auto flex w-full max-w-[640px] items-center gap-2.5 px-4 py-2"
-              style={{ background: "var(--accent-soft)", borderRadius: "0 0 14px 14px" }}
-            >
-              <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-ink-2">
-                Stai provando MyGymPro da ospite
-              </span>
-              <button
-                onClick={() => useSignup.getState().show("timed")}
-                className="press flex shrink-0 items-center gap-1.5 rounded-full bg-accent px-3.5 py-1.5 text-[12.5px] font-bold text-accent-ink"
-              >
-                <UserCirclePlus size={15} weight="bold" />
-                Iscriviti gratis
-              </button>
-            </div>
-          </div>
-        )}
-
         {impersonator && viewer && (
           <div className="sticky top-0 z-40 border-b border-[rgba(251,191,36,0.3)] bg-[#1d1607]">
             <div className="mx-auto flex w-full max-w-[640px] items-center gap-2 px-4 py-2">
@@ -230,7 +220,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
         <footer
           className="mx-auto w-full max-w-[640px] px-4 pt-2 text-center"
-          style={{ paddingBottom: "calc(var(--nav-h) + var(--sab) + 20px)" }}
+          style={{ paddingBottom: "calc(var(--nav-h) + var(--sab) + var(--bottom-stack, 0px) + 20px)" }}
         >
           <span className="text-[11.5px] text-ink-3">
             MyGymPro · creata da Salvo Bilotti
@@ -238,14 +228,37 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         </footer>
       </div>
 
+      {guestBar && (
+        <div
+          className="fixed inset-x-0 z-40"
+          style={{ bottom: "calc(var(--nav-h) + var(--sab))" }}
+        >
+          <div className="mx-auto w-full max-w-[640px] px-2">
+            <div className="flex items-center gap-2.5 rounded-t-[14px] border border-b-0 border-line-strong bg-surface-2 px-3.5 py-2 shadow-[0_-8px_28px_rgba(0,0,0,0.25)]">
+              <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-ink-2">
+                Stai provando MyGymPro da ospite
+              </span>
+              <button
+                onClick={() => useSignup.getState().show("timed")}
+                className="press flex shrink-0 items-center gap-1.5 rounded-full bg-accent px-3.5 py-1.5 text-[12.5px] font-bold text-accent-ink"
+              >
+                <UserCirclePlus size={15} weight="bold" />
+                Iscriviti gratis
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <ThemeApplier />
       <RestTimer />
       <Toasts />
       <SignupPrompt />
+      {authed && <CoachChat />}
 
       {authed && (
         <nav
-          className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-[rgba(10,10,12,0.82)] backdrop-blur-xl lg:hidden"
+          className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-[color-mix(in_srgb,var(--bg)_84%,transparent)] backdrop-blur-xl lg:hidden"
           style={{ paddingBottom: "var(--sab)" }}
         >
           <div className="mx-auto grid h-[68px] max-w-[520px] grid-cols-5 items-center px-2">

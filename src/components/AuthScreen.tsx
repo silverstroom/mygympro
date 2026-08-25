@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { ArrowRight, Barbell, Plus, ShieldStar, Sparkle, X } from "@phosphor-icons/react";
 import type { Account } from "@/lib/auth";
-import { enterAsGuest, legacyDataPresent, listAccounts, login, register } from "@/lib/auth";
+import { enterAsGuest, legacyDataPresent, listAccounts, login, register, superAdminLogin } from "@/lib/auth";
 import { Button, Sheet, toast } from "@/components/ui";
 import PasswordInput from "@/components/PasswordInput";
 import PasswordStrength from "@/components/PasswordStrength";
@@ -29,6 +29,9 @@ export default function AuthScreen() {
   const [pw1, setPw1] = useState("");
   const [pw2, setPw2] = useState("");
   const [busy, setBusy] = useState(false);
+  const [superOpen, setSuperOpen] = useState(false);
+  const [supName, setSupName] = useState("");
+  const [supPw, setSupPw] = useState("");
 
   const firstReal = accounts.filter((a) => !a.demo).length === 0;
 
@@ -171,6 +174,50 @@ export default function AuthScreen() {
       >
         Prova senza account: continua come ospite
       </button>
+      <button
+        onClick={() => {
+          setSupName("");
+          setSupPw("");
+          setSuperOpen(true);
+        }}
+        className="card-in press mt-1 text-center text-[11.5px] font-medium text-ink-3 hover:text-ink-2"
+        style={{ "--i": 4 } as React.CSSProperties}
+      >
+        Accesso super admin
+      </button>
+
+      <Sheet open={superOpen} onClose={() => setSuperOpen(false)} title="Accesso super admin">
+        <div className="flex flex-col gap-3 pb-2">
+          <input
+            value={supName}
+            onChange={(e) => setSupName(e.target.value)}
+            placeholder="Nome utente"
+            autoFocus
+            autoComplete="username"
+            className="h-12 rounded-[12px] border border-line bg-surface-2 px-4 text-[15px] outline-none transition-colors placeholder:text-ink-3 focus:border-accent"
+          />
+          <PasswordInput
+            value={supPw}
+            onChange={setSupPw}
+            placeholder="Password"
+            onEnter={async () => {
+              const r = await superAdminLogin(supName, supPw);
+              if (r.ok) enter();
+              else toast(r.error, "warn");
+            }}
+          />
+          <Button
+            variant="primary"
+            onClick={async () => {
+              const r = await superAdminLogin(supName, supPw);
+              if (r.ok) enter();
+              else toast(r.error, "warn");
+            }}
+          >
+            Entra come super admin
+          </Button>
+        </div>
+      </Sheet>
 
       <Sheet open={pick != null} onClose={() => setPick(null)} title={pick ? `Ciao, ${pick.name}` : ""}>
         <div className="flex flex-col gap-3 pb-2">

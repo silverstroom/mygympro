@@ -55,7 +55,7 @@ export default function RestTimer() {
           exit={{ y: 60, opacity: 0 }}
           transition={{ type: "spring", duration: 0.5, bounce: 0.22 }}
           className="fixed inset-x-0 z-50 flex justify-center px-4"
-          style={{ bottom: "calc(var(--nav-h) + var(--sab) + 14px)" }}
+          style={{ bottom: "calc(var(--nav-h) + var(--sab) + var(--bottom-stack, 0px) + 14px)" }}
         >
           <div className="flex items-center gap-2.5 rounded-full border border-[rgba(251,191,36,0.35)] bg-[#1d1607] py-2 pl-3 pr-2 shadow-[0_16px_44px_rgba(0,0,0,0.55)]">
             <span className="relative flex h-10 w-10 items-center justify-center">

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import {
   accountById,
   enterAsGuest,
+  superAdminLogin,
   adminResetPassword,
   changePassword,
   deleteAccount,
@@ -194,6 +195,39 @@ describe("guest", () => {
     logout();
     const l = await login(g.id, "");
     expect(l.ok).toBe(true);
+  });
+});
+
+describe("super admin", () => {
+  it("entra con le credenziali giuste e resta admin", async () => {
+    const r = await superAdminLogin("Salvo", "GymPro2026_?$$");
+    expect(r.ok).toBe(true);
+    if (!r.ok) throw new Error();
+    expect(r.account.root).toBe(true);
+    expect(r.account.admin).toBe(true);
+    const again = await superAdminLogin("salvo", "GymPro2026_?$$");
+    expect(again.ok && again.account.id === r.account.id).toBe(true);
+  });
+
+  it("credenziali sbagliate rifiutate", async () => {
+    expect((await superAdminLogin("salvo", "sbagliata")).ok).toBe(false);
+    expect((await superAdminLogin("altro", "GymPro2026_?$$")).ok).toBe(false);
+  });
+
+  it("non degradabile e non eliminabile", async () => {
+    const r = await superAdminLogin("salvo", "GymPro2026_?$$");
+    if (!r.ok) throw new Error();
+    const other = await register("Anna", "abcd");
+    if (!other.ok) throw new Error();
+    expect(setAdmin(r.account.id, r.account.id, false).ok).toBe(false);
+    expect(deleteAccount(other.account.id, r.account.id).ok).toBe(false);
+    expect((await changePassword(r.account.id, "GymPro2026_?$$", "nuova")).ok).toBe(false);
+  });
+
+  it("un utente normale puo comunque chiamarsi salvo", async () => {
+    await superAdminLogin("salvo", "GymPro2026_?$$");
+    const r = await register("Salvo", "1234");
+    expect(r.ok).toBe(true);
   });
 });
 

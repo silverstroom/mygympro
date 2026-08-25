@@ -13,10 +13,17 @@ export interface AccentTheme {
 
 export interface BgTheme {
   name: string;
+  light?: boolean;
   bg: string;
   surface: string;
   surface2: string;
   surface3: string;
+  text: string;
+  text2: string;
+  text3: string;
+  line: string;
+  lineStrong: string;
+  heat0: string;
 }
 
 export const DEFAULT_ACCENT = "sky";
@@ -97,6 +104,15 @@ export const ACCENTS: Record<string, AccentTheme> = {
   },
 };
 
+const DARK_TEXT = {
+  text: "#f4f4f5",
+  text2: "#a6a6af",
+  text3: "#6e6e78",
+  line: "rgba(255, 255, 255, 0.07)",
+  lineStrong: "rgba(255, 255, 255, 0.14)",
+  heat0: "#1d1d22",
+};
+
 export const BGS: Record<string, BgTheme> = {
   carbone: {
     name: "Carbone",
@@ -104,6 +120,7 @@ export const BGS: Record<string, BgTheme> = {
     surface: "#141417",
     surface2: "#1c1c21",
     surface3: "#26262c",
+    ...DARK_TEXT,
   },
   notte: {
     name: "Notte",
@@ -111,6 +128,7 @@ export const BGS: Record<string, BgTheme> = {
     surface: "#0f141d",
     surface2: "#151c27",
     surface3: "#1e2734",
+    ...DARK_TEXT,
   },
   bosco: {
     name: "Bosco",
@@ -118,6 +136,7 @@ export const BGS: Record<string, BgTheme> = {
     surface: "#0f1713",
     surface2: "#16201a",
     surface3: "#1e2b24",
+    ...DARK_TEXT,
   },
   espresso: {
     name: "Espresso",
@@ -125,6 +144,7 @@ export const BGS: Record<string, BgTheme> = {
     surface: "#161210",
     surface2: "#1e1915",
     surface3: "#29211b",
+    ...DARK_TEXT,
   },
   vinaccia: {
     name: "Vinaccia",
@@ -132,6 +152,35 @@ export const BGS: Record<string, BgTheme> = {
     surface: "#161013",
     surface2: "#1f161b",
     surface3: "#2a1f25",
+    ...DARK_TEXT,
+  },
+  chiaro: {
+    name: "Chiaro",
+    light: true,
+    bg: "#f2f4f7",
+    surface: "#ffffff",
+    surface2: "#eceff3",
+    surface3: "#dfe3e9",
+    text: "#17181d",
+    text2: "#4c4f58",
+    text3: "#878c97",
+    line: "rgba(20, 25, 40, 0.09)",
+    lineStrong: "rgba(20, 25, 40, 0.18)",
+    heat0: "#e2e5ea",
+  },
+  avorio: {
+    name: "Avorio",
+    light: true,
+    bg: "#f6f4ee",
+    surface: "#fffdf7",
+    surface2: "#efece3",
+    surface3: "#e3dfd2",
+    text: "#1c1a15",
+    text2: "#54514a",
+    text3: "#8f8b81",
+    line: "rgba(40, 35, 20, 0.09)",
+    lineStrong: "rgba(40, 35, 20, 0.18)",
+    heat0: "#e6e2d6",
   },
 };
 
@@ -148,9 +197,20 @@ export function applyTheme(accentKey?: string | null, bgKey?: string | null) {
   r.setProperty("--accent-glow", a.glow);
   r.setProperty("--accent-glow-soft", a.glowSoft);
   r.setProperty("--accent-sel", a.sel);
-  a.heat.forEach((h, i) => r.setProperty(`--heat-${i + 1}`, h));
+  const heat = b.light ? [...a.heat].reverse() : a.heat;
+  heat.forEach((h, i) => r.setProperty(`--heat-${i + 1}`, h));
+  r.setProperty("--heat-0", b.heat0);
   r.setProperty("--bg", b.bg);
   r.setProperty("--surface", b.surface);
   r.setProperty("--surface-2", b.surface2);
   r.setProperty("--surface-3", b.surface3);
+  r.setProperty("--text", b.text);
+  r.setProperty("--text-2", b.text2);
+  r.setProperty("--text-3", b.text3);
+  r.setProperty("--line", b.line);
+  r.setProperty("--line-strong", b.lineStrong);
+  document.documentElement.style.colorScheme = b.light ? "light" : "dark";
+  document
+    .querySelector('meta[name="theme-color"]')
+    ?.setAttribute("content", b.bg);
 }

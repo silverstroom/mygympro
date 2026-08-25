@@ -135,7 +135,7 @@ export default function AdminPage() {
                   {a.admin && (
                     <Tag tone="amber">
                       <ShieldStar size={11} weight="fill" />
-                      Admin
+                      {a.root ? "Super admin" : "Admin"}
                     </Tag>
                   )}
                   {a.demo && <Tag>Demo</Tag>}
@@ -163,7 +163,7 @@ export default function AdminPage() {
                   <Eye size={14} weight="bold" />
                   Apri profilo
                 </button>
-                {!a.demo && !a.guest && (
+                {!a.demo && !a.guest && !a.root && (
                   <button
                     onClick={() => {
                       setNewPw("");
@@ -175,7 +175,7 @@ export default function AdminPage() {
                     Reset password
                   </button>
                 )}
-                {!a.demo && !a.guest && (
+                {!a.demo && !a.guest && !a.root && (
                   <button
                     onClick={() => {
                       const res = setAdmin(me.id, a.id, !a.admin);
@@ -201,13 +201,15 @@ export default function AdminPage() {
                   <DownloadSimple size={14} weight="bold" />
                   Esporta
                 </button>
-                <button
-                  onClick={() => setDeleteFor(a)}
-                  className="press flex items-center gap-1.5 rounded-full bg-red-soft px-3.5 py-2 text-[12.5px] font-bold text-red"
-                >
-                  <Trash size={14} weight="bold" />
-                  Elimina
-                </button>
+                {!a.root && (
+                  <button
+                    onClick={() => setDeleteFor(a)}
+                    className="press flex items-center gap-1.5 rounded-full bg-red-soft px-3.5 py-2 text-[12.5px] font-bold text-red"
+                  >
+                    <Trash size={14} weight="bold" />
+                    Elimina
+                  </button>
+                )}
               </div>
             )}
           </Card>

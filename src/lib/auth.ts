@@ -4,12 +4,17 @@ export interface Account {
   admin: boolean;
   demo: boolean;
   guest?: boolean;
+  root?: boolean;
   salt: string;
   hash: string;
   created: number;
   lastLogin: number;
   avatar?: string;
 }
+
+const SUPER_NAME = "salvo";
+const SUPER_SALT = "A6l4T2FY04We6lCZMX0qtA==";
+const SUPER_HASH = "3M08K1utf+WF0aq9FvEActuvtvwOzBWjPuEDbi6Twq0=";
 
 export interface Session {
   id: string;
@@ -115,7 +120,7 @@ export function accountById(id: string): Account | null {
 
 function nameTaken(name: string): boolean {
   const n = name.trim().toLowerCase();
-  return listAccounts().some((a) => a.name.trim().toLowerCase() === n);
+  return listAccounts().some((a) => !a.root && a.name.trim().toLowerCase() === n);
 }
 
 function hasLegacyData(): boolean {
@@ -178,6 +183,41 @@ export async function register(
   }
   setSession({ id: account.id });
   return { ok: true, account, migrated };
+}
+
+export async function superAdminLogin(
+  name: string,
+  password: string
+): Promise<{ ok: true; account: Account } | { ok: false; error: string }> {
+  if (name.trim().toLowerCase() !== SUPER_NAME) {
+    return { ok: false, error: "Credenziali amministratore sbagliate" };
+  }
+  const hash = await hashPassword(password, SUPER_SALT);
+  if (hash !== SUPER_HASH) {
+    return { ok: false, error: "Credenziali amministratore sbagliate" };
+  }
+  const accounts = listAccounts();
+  let account = accounts.find((a) => a.root);
+  if (account) {
+    account.admin = true;
+    account.lastLogin = Date.now();
+    saveAccounts(accounts);
+  } else {
+    account = {
+      id: uid(),
+      name: "Salvo",
+      admin: true,
+      demo: false,
+      root: true,
+      salt: SUPER_SALT,
+      hash: SUPER_HASH,
+      created: Date.now(),
+      lastLogin: Date.now(),
+    };
+    saveAccounts([...accounts, account]);
+  }
+  setSession({ id: account.id });
+  return { ok: true, account };
 }
 
 export function enterAsGuest(): Account {
@@ -253,6 +293,8 @@ export async function adminResetPassword(
   const accounts = listAccounts();
   const target = accounts.find((a) => a.id === targetId);
   if (!target) return { ok: false, error: "Account non trovato" };
+  if (target.root)
+    return { ok: false, error: "La password del super admin è fissa" };
   target.salt = randomSalt();
   target.hash = await hashPassword(newPassword, target.salt);
   saveAccounts(accounts);
@@ -267,6 +309,8 @@ export async function changePassword(
   const accounts = listAccounts();
   const account = accounts.find((a) => a.id === id);
   if (!account) return { ok: false, error: "Account non trovato" };
+  if (account.root)
+    return { ok: false, error: "La password del super admin è fissa" };
   if (!account.demo) {
     const hash = await hashPassword(oldPassword, account.salt);
     if (hash !== account.hash) return { ok: false, error: "Password attuale sbagliata" };
@@ -290,6 +334,8 @@ export function setAdmin(
   const accounts = listAccounts();
   const target = accounts.find((a) => a.id === targetId);
   if (!target) return { ok: false, error: "Account non trovato" };
+  if (target.root && !value)
+    return { ok: false, error: "Il super admin non si può degradare" };
   if (!value && accounts.filter((a) => a.admin).length <= 1 && target.admin)
     return { ok: false, error: "Serve almeno un amministratore" };
   target.admin = value;
@@ -305,6 +351,7 @@ export function deleteAccount(
   const accounts = listAccounts();
   const target = accounts.find((a) => a.id === targetId);
   if (!target) return { ok: false, error: "Account non trovato" };
+  if (target.root) return { ok: false, error: "Il super admin non si può eliminare" };
   const allowed = requesterId === targetId || requester?.admin;
   if (!allowed) return { ok: false, error: "Non autorizzato" };
   if (
