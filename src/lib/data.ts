@@ -1,8 +1,7 @@
 import type { CustomExercise, ExerciseIndex, ExMode } from "./types";
 import { SEARCH_ALIASES, tBody, tEquip, tTarget } from "./it";
 
-const GIF_CDN =
-  "https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@main/videos";
+const MEDIA_CDN = "https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@main";
 
 let indexCache: ExerciseIndex[] | null = null;
 let indexPromise: Promise<ExerciseIndex[]> | null = null;
@@ -43,11 +42,11 @@ export async function loadSteps(id: string): Promise<{ it: string[]; en: string[
 }
 
 export function imgUrl(ex: ExerciseIndex): string {
-  return `/img/ex/${ex.m}.jpg`;
+  return `${MEDIA_CDN}/images/${ex.m}.jpg`;
 }
 
 export function gifUrl(ex: ExerciseIndex): string {
-  return `${GIF_CDN}/${ex.m}.gif`;
+  return `${MEDIA_CDN}/videos/${ex.m}.gif`;
 }
 
 export function customToIndex(c: CustomExercise): ExerciseIndex {

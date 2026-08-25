@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { MagnifyingGlass, X } from "@phosphor-icons/react";
 import type { ExerciseIndex } from "@/lib/types";
-import { equipmentOptions, loadIndex, searchExercises } from "@/lib/data";
+import { equipmentOptions, imgUrl, loadIndex, searchExercises } from "@/lib/data";
 import { BODY_IT, tBody, tEquip, tTarget } from "@/lib/it";
 import { useStore } from "@/lib/store";
 import { Button, Chip } from "@/components/ui";
@@ -157,7 +157,7 @@ function ExThumbFill({ ex }: { ex: ExerciseIndex }) {
   }
   return (
     <img
-      src={`/img/ex/${ex.m}.jpg`}
+      src={imgUrl(ex)}
       alt={ex.n}
       loading="lazy"
       decoding="async"
