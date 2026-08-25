@@ -11,6 +11,7 @@ import {
   GearSix,
   HouseSimple,
   SquaresFour,
+  UserCirclePlus,
 } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 import { loadIndex } from "@/lib/data";
@@ -169,6 +170,26 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
+        {authed && viewer?.guest && !impersonator && (
+          <div className="sticky top-0 z-40 border-b border-[color:var(--accent-soft)] bg-[color:var(--bg)]">
+            <div
+              className="mx-auto flex w-full max-w-[640px] items-center gap-2.5 px-4 py-2"
+              style={{ background: "var(--accent-soft)", borderRadius: "0 0 14px 14px" }}
+            >
+              <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-ink-2">
+                Stai provando MyGymPro da ospite
+              </span>
+              <button
+                onClick={() => useSignup.getState().show("timed")}
+                className="press flex shrink-0 items-center gap-1.5 rounded-full bg-accent px-3.5 py-1.5 text-[12.5px] font-bold text-accent-ink"
+              >
+                <UserCirclePlus size={15} weight="bold" />
+                Iscriviti gratis
+              </button>
+            </div>
+          </div>
+        )}
+
         {impersonator && viewer && (
           <div className="sticky top-0 z-40 border-b border-[rgba(251,191,36,0.3)] bg-[#1d1607]">
             <div className="mx-auto flex w-full max-w-[640px] items-center gap-2 px-4 py-2">

@@ -315,9 +315,14 @@ export function deleteAccount(
     return { ok: false, error: "Nomina prima un altro amministratore" };
   }
   saveAccounts(accounts.filter((a) => a.id !== targetId));
-  ls()?.removeItem(userStorageKey(targetId));
-  const sess = getSession();
-  if (sess?.id === targetId) setSession(null);
+  const s = ls();
+  s?.removeItem(userStorageKey(targetId));
+  try {
+    const raw = s?.getItem(SESSION_KEY);
+    if (raw && (JSON.parse(raw) as Session)?.id === targetId) setSession(null);
+  } catch {
+    setSession(null);
+  }
   return { ok: true };
 }
 
