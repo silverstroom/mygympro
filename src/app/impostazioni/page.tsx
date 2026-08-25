@@ -311,7 +311,7 @@ export default function ImpostazioniPage() {
             className="press flex items-center gap-1.5 rounded-full bg-surface-2 px-3.5 py-2 text-[12.5px] font-bold text-ink-2 hover:text-ink"
           >
             <SignOut size={15} weight="bold" />
-            Esci
+            {me?.guest ? "Accedi" : "Esci"}
           </button>
         </div>
         <div className="mt-3 flex items-center justify-between gap-3 border-t border-line pt-3">

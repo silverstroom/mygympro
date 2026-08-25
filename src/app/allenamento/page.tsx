@@ -42,6 +42,7 @@ import Stepper from "@/components/Stepper";
 import { ExMedia } from "@/components/ExMedia";
 import ExercisePicker from "@/components/ExercisePicker";
 import Confetti from "@/components/Confetti";
+import { coachSay } from "@/components/CoachChat";
 import CountUp from "@/components/CountUp";
 import { ROUTINE_ICONS } from "@/components/routineIcons";
 
@@ -139,7 +140,7 @@ function QuickCard() {
         buildEntry(re, workouts, exWeights, index, custom)
       );
       startSession(null, q.name, entries);
-      toast(q.note, "info");
+      coachSay(q.note);
       router.push("/allenamento");
     } catch {
       toast("Impossibile preparare la sessione", "warn");
@@ -680,7 +681,7 @@ function ActiveWorkout() {
         shouldHypeSet(doneSet.w, doneSet.r ?? 0)
       ) {
         const line = hypeForSet(doneSet.w);
-        if (line) toast(line);
+        if (line) coachSay(line);
       }
       const totalNow = nowActive.entries.reduce((n, e) => n + e.sets.length, 0);
       const doneNow = nowActive.entries.reduce(

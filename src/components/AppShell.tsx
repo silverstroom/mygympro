@@ -10,6 +10,7 @@ import {
   Eye,
   GearSix,
   HouseSimple,
+  SignIn,
   SquaresFour,
   UserCirclePlus,
 } from "@phosphor-icons/react";
@@ -23,6 +24,7 @@ import {
   getSession,
   listAccounts,
   login,
+  logout,
   register,
   seedAccountState,
   stopImpersonation,
@@ -234,10 +236,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           style={{ bottom: "calc(var(--nav-h) + var(--sab))" }}
         >
           <div className="mx-auto w-full max-w-[640px] px-2">
-            <div className="flex items-center gap-2.5 rounded-t-[14px] border border-b-0 border-line-strong bg-surface-2 px-3.5 py-2 shadow-[0_-8px_28px_rgba(0,0,0,0.25)]">
+            <div className="flex items-center gap-2 rounded-t-[14px] border border-b-0 border-line-strong bg-surface-2 px-3.5 py-2 shadow-[0_-8px_28px_rgba(0,0,0,0.25)]">
               <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-ink-2">
-                Stai provando MyGymPro da ospite
+                Modalità ospite
               </span>
+              <button
+                onClick={() => {
+                  logout();
+                  window.location.replace("/");
+                }}
+                className="press flex shrink-0 items-center gap-1.5 rounded-full border border-line-strong bg-surface px-3.5 py-1.5 text-[12.5px] font-bold text-ink"
+              >
+                <SignIn size={15} weight="bold" />
+                Accedi
+              </button>
               <button
                 onClick={() => useSignup.getState().show("timed")}
                 className="press flex shrink-0 items-center gap-1.5 rounded-full bg-accent px-3.5 py-1.5 text-[12.5px] font-bold text-accent-ink"

@@ -12,7 +12,7 @@ import {
   UserCirclePlus,
   Watch,
 } from "@phosphor-icons/react";
-import { currentAccount, register } from "@/lib/auth";
+import { currentAccount, logout, register } from "@/lib/auth";
 import { useStore } from "@/lib/store";
 import { Button, Sheet, toast } from "@/components/ui";
 import PasswordInput from "@/components/PasswordInput";
@@ -168,6 +168,14 @@ export default function SignupPrompt() {
           <Button variant="primary" onClick={() => setForm(true)}>
             <UserCirclePlus size={18} weight="bold" />
             Crea il tuo account gratis
+          </Button>
+          <Button
+            onClick={() => {
+              logout();
+              window.location.replace("/");
+            }}
+          >
+            Ho già un account: accedi
           </Button>
           <Button variant="ghost" onClick={close}>
             Più tardi

@@ -19,6 +19,8 @@ import { buildEntry } from "@/lib/session";
 import { useSignup } from "@/components/SignupPrompt";
 import { toast } from "@/components/ui";
 
+import { create } from "zustand";
+
 interface Msg {
   role: "user" | "coach";
   text: string;
@@ -26,7 +28,41 @@ interface Msg {
   actions?: ChatAction[];
 }
 
-let history: Msg[] = [];
+interface CoachStore {
+  msgs: Msg[];
+  bubble: string | null;
+  chatOpen: boolean;
+  push: (m: Msg) => void;
+  say: (text: string) => void;
+  clearBubble: () => void;
+  setChatOpen: (v: boolean) => void;
+}
+
+let bubbleTimer: ReturnType<typeof setTimeout> | null = null;
+
+export const useCoach = create<CoachStore>((set, get) => ({
+  msgs: [],
+  bubble: null,
+  chatOpen: false,
+  push: (m) => set((s) => ({ msgs: [...s.msgs, m] })),
+  say: (text) => {
+    set((s) => ({ msgs: [...s.msgs, { role: "coach", text }] }));
+    if (!get().chatOpen) {
+      if (bubbleTimer) clearTimeout(bubbleTimer);
+      set({ bubble: text });
+      bubbleTimer = setTimeout(() => set({ bubble: null }), 5200);
+    }
+  },
+  clearBubble: () => {
+    if (bubbleTimer) clearTimeout(bubbleTimer);
+    set({ bubble: null });
+  },
+  setChatOpen: (v) => set({ chatOpen: v }),
+}));
+
+export function coachSay(text: string) {
+  useCoach.getState().say(text);
+}
 
 const CHIPS = [
   "Cosa mi alleno oggi?",
@@ -38,16 +74,24 @@ const CHIPS = [
 
 export default function CoachChat() {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [msgs, setMsgs] = useState<Msg[]>(history);
+  const [open, setOpenState] = useState(false);
+  const msgs = useCoach((s) => s.msgs);
+  const bubble = useCoach((s) => s.bubble);
+  const pushMsg = useCoach((s) => s.push);
+  const clearBubble = useCoach((s) => s.clearBubble);
   const [input, setInput] = useState("");
   const [typing, setTyping] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const active = useStore((s) => s.active);
   const startSession = useStore((s) => s.startSession);
 
+  const setOpen = (v: boolean) => {
+    setOpenState(v);
+    useCoach.getState().setChatOpen(v);
+    if (v) clearBubble();
+  };
+
   useEffect(() => {
-    history = msgs;
     const el = listRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [msgs, typing, open]);
@@ -55,14 +99,12 @@ export default function CoachChat() {
   useEffect(() => {
     if (open && msgs.length === 0) {
       const name = currentAccount()?.name ?? "";
-      setMsgs([
-        {
-          role: "coach",
-          text: `Ciao${name && name !== "Ospite" ? ` ${name}` : ""}! Sono il tuo personal trainer virtuale: conosco le tue schede, i tuoi carichi e i tuoi progressi. Chiedimi quello che vuoi, oppure parti da un suggerimento qui sotto.`,
-        },
-      ]);
+      pushMsg({
+        role: "coach",
+        text: `Ciao${name && name !== "Ospite" ? ` ${name}` : ""}! Sono il tuo personal trainer virtuale: conosco le tue schede, i tuoi carichi e i tuoi progressi. Chiedimi quello che vuoi, oppure parti da un suggerimento qui sotto.`,
+      });
     }
-  }, [open, msgs.length]);
+  }, [open, msgs.length, pushMsg]);
 
   const runAction = async (a: ChatAction) => {
     if (a.type === "href") {
@@ -89,7 +131,7 @@ export default function CoachChat() {
           buildEntry(re, s.workouts, s.exWeights, index, s.custom)
         );
         startSession(null, q.name, entries);
-        toast(q.note, "info");
+        coachSay(q.note);
         setOpen(false);
         router.push("/allenamento");
       } catch {
@@ -102,7 +144,7 @@ export default function CoachChat() {
     const text = (raw ?? input).trim();
     if (!text || typing) return;
     setInput("");
-    setMsgs((m) => [...m, { role: "user", text }]);
+    pushMsg({ role: "user", text });
     setTyping(true);
 
     const s = useStore.getState();
@@ -138,15 +180,40 @@ export default function CoachChat() {
 
     setTimeout(() => {
       setTyping(false);
-      setMsgs((m) => [
-        ...m,
-        { role: "coach", text: res.text, steps, actions: res.actions },
-      ]);
+      pushMsg({ role: "coach", text: res.text, steps, actions: res.actions });
     }, 450);
   };
 
   return (
     <>
+      <AnimatePresence>
+        {!open && bubble && (
+          <motion.button
+            key="coach-bubble"
+            initial={{ opacity: 0, y: 14, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 8, scale: 0.95 }}
+            transition={{ type: "spring", duration: 0.5, bounce: 0.3 }}
+            onClick={() => setOpen(true)}
+            className="fixed right-4 z-40 max-w-[270px] text-left"
+            style={{
+              bottom: active?.restUntil
+                ? "calc(var(--nav-h) + var(--sab) + var(--bottom-stack, 0px) + 148px)"
+                : "calc(var(--nav-h) + var(--sab) + var(--bottom-stack, 0px) + 76px)",
+            }}
+          >
+            <span className="block rounded-[16px] rounded-br-[5px] border border-line-strong bg-surface-2 px-3.5 py-2.5 text-[13px] font-medium leading-snug shadow-[0_12px_36px_rgba(0,0,0,0.4)]">
+              <span className="mb-0.5 flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-wide text-accent">
+                <ChalkboardTeacher size={13} weight="fill" />
+                Coach
+              </span>
+              {bubble}
+            </span>
+            <span className="mr-5 block h-2.5 w-2.5 -translate-y-[6px] rotate-45 justify-self-end border-b border-r border-line-strong bg-surface-2" style={{ marginLeft: "auto" }} />
+          </motion.button>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence>
         {!open && (
           <motion.button
