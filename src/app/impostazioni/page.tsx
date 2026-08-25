@@ -305,6 +305,9 @@ export default function ImpostazioniPage() {
           </div>
           <button
             onClick={() => {
+              try {
+                if (me?.guest) sessionStorage.setItem("mygympro-want-login", "1");
+              } catch {}
               logout();
               window.location.replace("/");
             }}

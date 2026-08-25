@@ -171,6 +171,9 @@ export default function SignupPrompt() {
           </Button>
           <Button
             onClick={() => {
+              try {
+                sessionStorage.setItem("mygympro-want-login", "1");
+              } catch {}
               logout();
               window.location.replace("/");
             }}

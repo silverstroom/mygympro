@@ -90,9 +90,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       return;
     }
     if (!current) {
+      let wantLogin = false;
+      try {
+        wantLogin = sessionStorage.getItem("mygympro-want-login") === "1";
+        if (wantLogin) sessionStorage.removeItem("mygympro-want-login");
+      } catch {}
       const accounts = listAccounts();
       const hasVisible = accounts.some((a) => !a.guest);
-      if (!hasVisible) {
+      if (!hasVisible && !wantLogin) {
         const existing = accounts.find((a) => a.guest);
         enterAsGuest();
         if (existing) {
@@ -121,7 +126,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     document.documentElement.style.setProperty(
       "--bottom-stack",
-      guestBar ? "48px" : "0px"
+      guestBar ? "78px" : "0px"
     );
   }, [guestBar]);
 
@@ -232,32 +237,33 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
       {guestBar && (
         <div
-          className="fixed inset-x-0 z-40"
-          style={{ bottom: "calc(var(--nav-h) + var(--sab))" }}
+          className="pointer-events-none fixed inset-x-0 z-40 flex justify-center px-3"
+          style={{ bottom: "calc(var(--nav-h) + var(--sab) + 38px)" }}
         >
-          <div className="mx-auto w-full max-w-[640px] px-2">
-            <div className="flex items-center gap-2 rounded-t-[14px] border border-b-0 border-line-strong bg-surface-2 px-3.5 py-2 shadow-[0_-8px_28px_rgba(0,0,0,0.25)]">
-              <span className="min-w-0 flex-1 truncate text-[12.5px] font-semibold text-ink-2">
-                Modalità ospite
-              </span>
-              <button
-                onClick={() => {
-                  logout();
-                  window.location.replace("/");
-                }}
-                className="press flex shrink-0 items-center gap-1.5 rounded-full border border-line-strong bg-surface px-3.5 py-1.5 text-[12.5px] font-bold text-ink"
-              >
-                <SignIn size={15} weight="bold" />
-                Accedi
-              </button>
-              <button
-                onClick={() => useSignup.getState().show("timed")}
-                className="press flex shrink-0 items-center gap-1.5 rounded-full bg-accent px-3.5 py-1.5 text-[12.5px] font-bold text-accent-ink"
-              >
-                <UserCirclePlus size={15} weight="bold" />
-                Iscriviti gratis
-              </button>
-            </div>
+          <div className="pointer-events-auto flex max-w-full items-center gap-2 rounded-full border border-line-strong bg-surface-2 py-1.5 pl-4 pr-1.5 shadow-[0_14px_40px_rgba(0,0,0,0.45)]">
+            <span className="min-w-0 truncate text-[12.5px] font-semibold text-ink-2">
+              Modalità ospite
+            </span>
+            <button
+              onClick={() => {
+                try {
+                  sessionStorage.setItem("mygympro-want-login", "1");
+                } catch {}
+                logout();
+                window.location.replace("/");
+              }}
+              className="press flex shrink-0 items-center gap-1.5 rounded-full border border-line-strong bg-surface px-3.5 py-2 text-[12.5px] font-bold text-ink"
+            >
+              <SignIn size={15} weight="bold" />
+              Accedi
+            </button>
+            <button
+              onClick={() => useSignup.getState().show("timed")}
+              className="press flex shrink-0 items-center gap-1.5 rounded-full bg-accent px-3.5 py-2 text-[12.5px] font-bold text-accent-ink"
+            >
+              <UserCirclePlus size={15} weight="bold" />
+              Iscriviti gratis
+            </button>
           </div>
         </div>
       )}
