@@ -58,7 +58,7 @@ export default function EserciziPage() {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Cerca: panca, squat, dorsali..."
-          className="h-11 w-full bg-transparent text-[15px] outline-none placeholder:text-ink-3"
+          className="h-11 w-full bg-transparent text-[16px] outline-none placeholder:text-ink-3"
         />
         {q && (
           <button aria-label="Pulisci ricerca" onClick={() => setQ("")} className="press text-ink-3">

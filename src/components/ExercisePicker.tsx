@@ -87,7 +87,7 @@ export default function ExercisePicker({
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Cerca: panca, squat, dorsali..."
-            className="h-11 w-full bg-transparent text-[15px] outline-none placeholder:text-ink-3"
+            className="h-11 w-full bg-transparent text-[16px] outline-none placeholder:text-ink-3"
           />
           {q && (
             <button aria-label="Pulisci ricerca" onClick={() => setQ("")} className="press text-ink-3">
@@ -129,7 +129,7 @@ export default function ExercisePicker({
               onChange={(e) => setCName(e.target.value)}
               placeholder="Nome esercizio"
               autoFocus
-              className="h-11 rounded-[12px] border border-line bg-surface px-3.5 text-[15px] outline-none placeholder:text-ink-3 focus:border-accent"
+              className="h-11 rounded-[12px] border border-line bg-surface px-3.5 text-[16px] outline-none placeholder:text-ink-3 focus:border-accent"
             />
             <div className="no-scrollbar -mx-1 flex gap-2 overflow-x-auto px-1">
               {Object.keys(BODY_IT).map((k) => (

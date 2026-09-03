@@ -75,7 +75,7 @@ export default function Confetti({ fire }: { fire: boolean }) {
     <canvas
       ref={canvasRef}
       className="pointer-events-none fixed inset-0 z-[70]"
-      style={{ width: "100vw", height: "100vh" }}
+      style={{ width: "100%", height: "100%" }}
     />
   );
 }

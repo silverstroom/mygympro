@@ -199,7 +199,7 @@ export default function SignupPrompt() {
             placeholder="Il tuo nome"
             autoFocus
             autoComplete="username"
-            className="h-12 rounded-[12px] border border-line bg-surface-2 px-4 text-[15px] outline-none transition-colors placeholder:text-ink-3 focus:border-accent"
+            className="h-12 rounded-[12px] border border-line bg-surface-2 px-4 text-[16px] outline-none transition-colors placeholder:text-ink-3 focus:border-accent"
           />
           <PasswordInput
             value={pw1}

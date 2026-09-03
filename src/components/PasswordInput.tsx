@@ -30,7 +30,7 @@ export default function PasswordInput({
         autoComplete={autoComplete}
         spellCheck={false}
         onKeyDown={(e) => e.key === "Enter" && onEnter?.()}
-        className="h-12 w-full min-w-0 bg-transparent px-4 text-[15px] outline-none placeholder:text-ink-3"
+        className="h-12 w-full min-w-0 bg-transparent px-4 text-[16px] outline-none placeholder:text-ink-3"
       />
       <button
         type="button"

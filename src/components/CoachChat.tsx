@@ -351,7 +351,7 @@ export default function CoachChat() {
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && send()}
                     placeholder="Chiedi al coach..."
-                    className="h-11 w-full min-w-0 flex-1 rounded-full border border-line bg-surface-2 px-4 text-[14.5px] outline-none placeholder:text-ink-3 focus:border-accent"
+                    className="h-11 w-full min-w-0 flex-1 rounded-full border border-line bg-surface-2 px-4 text-[16px] outline-none placeholder:text-ink-3 focus:border-accent"
                   />
                   <button
                     aria-label="Invia"

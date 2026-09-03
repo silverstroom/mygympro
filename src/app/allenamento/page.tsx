@@ -105,7 +105,7 @@ function SetField({
           onChange(Number.isFinite(v) ? v : 0);
         }}
         onFocus={(e) => e.target.select()}
-        className="tnum w-full min-w-0 bg-transparent text-center text-[15.5px] font-bold outline-none"
+        className="tnum w-full min-w-0 bg-transparent text-center text-[16px] font-bold outline-none"
       />
       <button
         aria-label="Aumenta"

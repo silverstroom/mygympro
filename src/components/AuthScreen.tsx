@@ -147,7 +147,7 @@ export default function AuthScreen() {
             onChange={(e) => setName(e.target.value)}
             placeholder="Il tuo nome"
             autoComplete="username"
-            className="h-12 rounded-[12px] border border-line bg-surface-2 px-4 text-[15px] outline-none transition-colors placeholder:text-ink-3 focus:border-accent"
+            className="h-12 rounded-[12px] border border-line bg-surface-2 px-4 text-[16px] outline-none transition-colors placeholder:text-ink-3 focus:border-accent"
           />
           <PasswordInput value={pw1} onChange={setPw1} placeholder="Password (minimo 4 caratteri)" autoComplete="new-password" />
           <PasswordStrength value={pw1} className="px-0.5" />
@@ -197,7 +197,7 @@ export default function AuthScreen() {
             placeholder="Nome utente"
             autoFocus
             autoComplete="username"
-            className="h-12 rounded-[12px] border border-line bg-surface-2 px-4 text-[15px] outline-none transition-colors placeholder:text-ink-3 focus:border-accent"
+            className="h-12 rounded-[12px] border border-line bg-surface-2 px-4 text-[16px] outline-none transition-colors placeholder:text-ink-3 focus:border-accent"
           />
           <PasswordInput
             value={supPw}
