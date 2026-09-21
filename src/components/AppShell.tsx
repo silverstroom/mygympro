@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Barbell,
   CalendarBlank,
@@ -32,9 +32,10 @@ import {
   seedAccountState,
   stopImpersonation,
 } from "@/lib/auth";
+import { clearPlanDraft, readPlanDraft, shouldRestore } from "@/lib/plandraft";
 import RestTimer from "@/components/RestTimer";
 import AuthScreen from "@/components/AuthScreen";
-import { Toasts } from "@/components/ui";
+import { toast, Toasts } from "@/components/ui";
 import SignupPrompt, { useSignup } from "@/components/SignupPrompt";
 import ProfileSetup, { useProfileSetup } from "@/components/ProfileSetup";
 import CoachChat from "@/components/CoachChat";
@@ -67,12 +68,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   const active = useStore((s) => s.active);
   const hydrated = useStore((s) => s.hydrated);
   const [sess, setSess] = useState<Session | null | undefined>(undefined);
+  const bootRef = useRef(false);
 
   useEffect(() => {
     loadIndex().catch(() => {});
   }, []);
 
+  // Una volta sola: qui si creano account e si consumano flag di sessione.
   useEffect(() => {
+    if (bootRef.current) return;
+    bootRef.current = true;
     const params = new URLSearchParams(window.location.search);
     const current = getSession();
     if (params.has("demo") && !current) {
@@ -145,6 +150,39 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     }
     resetAll();
   };
+
+  // La scheda del percorso guidato segue l'utente nel profilo appena creato.
+  const draftChecked = useRef(false);
+  useEffect(() => {
+    if (!authed || !hydrated || !viewer || viewer.demo || impersonator) return;
+    if (draftChecked.current) return;
+    draftChecked.current = true;
+    const st = useStore.getState();
+    const draft = readPlanDraft();
+    if (
+      !shouldRestore(draft, {
+        accountId: viewer.id,
+        accountCreated: viewer.created,
+        routines: st.routines.length,
+        onboarded: st.onboarded,
+        demo: st.demo,
+      })
+    ) {
+      if (draft && draft.fromId !== viewer.id && st.routines.length > 0) clearPlanDraft();
+      return;
+    }
+    draft!.routines.forEach(st.saveRoutine);
+    draft!.week.forEach((rid, i) => st.assignDay(i, rid));
+    const keep: Record<string, string> = {};
+    if (draft!.goal) keep.goal = draft!.goal;
+    if (draft!.level) keep.level = draft!.level;
+    if (draft!.equip) keep.equip = draft!.equip;
+    st.setSettings(keep);
+    st.setOnboarded();
+    clearPlanDraft();
+    toast("Ritrovata la scheda che avevi appena costruito");
+  }, [authed, hydrated, viewer, impersonator]);
+
 
   useEffect(() => {
     if (!authed || viewer?.guest || viewer?.demo || impersonator) return;

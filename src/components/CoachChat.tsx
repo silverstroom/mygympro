@@ -15,6 +15,7 @@ import { useStore } from "@/lib/store";
 import { currentAccount } from "@/lib/auth";
 import { isGuest, GUEST_WO_LIMIT } from "@/lib/guest";
 import { generateQuickWorkout } from "@/lib/quickwo";
+import { isEquip } from "@/lib/equip";
 import { buildEntry } from "@/lib/session";
 import { useSignup } from "@/components/SignupPrompt";
 import { toast } from "@/components/ui";
@@ -126,7 +127,9 @@ export default function CoachChat() {
       }
       try {
         const index = await loadIndex();
-        const q = generateQuickWorkout(a.minutes, "palestra");
+        // niente macchine a chi si allena a casa
+        const equip = isEquip(s.settings.equip) ? s.settings.equip : "palestra";
+        const q = generateQuickWorkout(a.minutes, equip);
         const entries = q.exercises.map((re) =>
           buildEntry(re, s.workouts, s.exWeights, index, s.custom)
         );

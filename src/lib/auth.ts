@@ -318,6 +318,30 @@ export function enterAsGuest(): Account {
   return account;
 }
 
+/** L'account ospite del dispositivo, se esiste. */
+export function guestAccount(): Account | null {
+  return listAccounts().find((a) => a.guest) ?? null;
+}
+
+export interface GuestCarry {
+  id: string;
+  routines: number;
+  workouts: number;
+  onboarded: boolean;
+}
+
+/**
+ * Cosa c'è da portarsi dietro dalla prova da ospite: serve a non far rifare
+ * la scheda a chi si registra subito dopo il percorso guidato.
+ */
+export function guestCarry(): GuestCarry | null {
+  const g = guestAccount();
+  if (!g) return null;
+  const st = accountStats(g.id);
+  if (!st.routines && !st.workouts && !st.bodyweights && !st.onboarded) return null;
+  return { id: g.id, routines: st.routines, workouts: st.workouts, onboarded: st.onboarded };
+}
+
 export async function login(
   id: string,
   password: string

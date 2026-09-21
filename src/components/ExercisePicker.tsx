@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { MagnifyingGlass, Plus, X } from "@phosphor-icons/react";
+import { HouseLine, MagnifyingGlass, Plus, X } from "@phosphor-icons/react";
 import type { ExerciseIndex } from "@/lib/types";
 import {
   equipmentOptions,
@@ -10,6 +10,7 @@ import {
 } from "@/lib/data";
 import { BODY_IT, tBody, tEquip, tTarget } from "@/lib/it";
 import { useStore } from "@/lib/store";
+import { EQUIP_SHORT, filterByEquip, isEquip } from "@/lib/equip";
 import { Button, Chip, Sheet, toast } from "@/components/ui";
 import { ExThumb } from "@/components/ExMedia";
 import { isGuest, GUEST_EX_LIMIT } from "@/lib/guest";
@@ -29,6 +30,9 @@ export default function ExercisePicker({
 }) {
   const custom = useStore((s) => s.custom);
   const addCustom = useStore((s) => s.addCustomExercise);
+  const savedEquip = useStore((s) => s.settings.equip);
+  const equip = isEquip(savedEquip) && savedEquip !== "palestra" ? savedEquip : null;
+  const [onlyMine, setOnlyMine] = useState(true);
   const [index, setIndex] = useState<ExerciseIndex[] | null>(null);
   const [q, setQ] = useState("");
   const [bp, setBp] = useState<string | null>(null);
@@ -49,16 +53,22 @@ export default function ExercisePicker({
 
   useEffect(() => {
     setLimit(PAGE);
-  }, [q, bp, eq]);
+  }, [q, bp, eq, onlyMine]);
+
+  // Con l'attrezzatura di casa la libreria mostra solo quello che puoi davvero fare.
+  const pool = useMemo(
+    () => (index && equip && onlyMine ? filterByEquip(index, equip) : index),
+    [index, equip, onlyMine]
+  );
 
   const results = useMemo(() => {
-    if (!index) return [];
-    return searchExercises(index, custom, q, bp, eq);
-  }, [index, custom, q, bp, eq]);
+    if (!pool) return [];
+    return searchExercises(pool, custom, q, bp, eq);
+  }, [pool, custom, q, bp, eq]);
 
   const eqOptions = useMemo(
-    () => (index ? equipmentOptions(index, bp) : []),
-    [index, bp]
+    () => (pool ? equipmentOptions(pool, bp) : []),
+    [pool, bp]
   );
 
   const create = () => {
@@ -95,6 +105,13 @@ export default function ExercisePicker({
             </button>
           )}
         </div>
+
+        {equip && (
+          <Chip on={onlyMine} onClick={() => setOnlyMine(!onlyMine)} className="self-start">
+            <HouseLine size={14} weight="bold" />
+            {onlyMine ? `Solo ${EQUIP_SHORT[equip]}` : "Tutta la libreria"}
+          </Chip>
+        )}
 
         <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5">
           {Object.keys(BODY_IT).map((k) => (

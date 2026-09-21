@@ -25,6 +25,7 @@ export type SignupReason =
   | "theme"
   | "devices"
   | "post-workout"
+  | "plan"
   | "coach";
 
 const PROMPT_KEY = "mygympro-signup-prompt-v1";
@@ -88,6 +89,7 @@ const REASON_TITLE: Record<SignupReason, string> = {
   theme: "La personalizzazione è degli iscritti",
   devices: "L'import da dispositivi è degli iscritti",
   "post-workout": "Bel lavoro: non perderlo",
+  plan: "La tua scheda è pronta: tienitela",
   coach: "Metti al sicuro i tuoi progressi",
 };
 
@@ -104,6 +106,8 @@ const REASON_SUB: Record<SignupReason, string> = {
     "Corse e allenamenti da Apple Watch e smartwatch si importano in un account gratuito.",
   "post-workout":
     "Questo allenamento è nei tuoi 3 da ospite. Con un account gratuito ogni serie resta nello storico, per sempre.",
+  plan:
+    "Il piano che hai appena costruito è già salvato qui. Crea l'account in trenta secondi e te lo porti dietro così com'è: non dovrai rispondere di nuovo alle domande.",
   coach:
     "I progressi che stai costruendo da ospite meritano un posto sicuro: crea il tuo account gratuito.",
 };
@@ -125,6 +129,7 @@ export default function SignupPrompt() {
   const [pw2, setPw2] = useState("");
   const [busy, setBusy] = useState(false);
   const workouts = useStore((s) => s.workouts);
+  const routines = useStore((s) => s.routines);
 
   const close = () => {
     setForm(false);
@@ -215,11 +220,21 @@ export default function SignupPrompt() {
             autoComplete="new-password"
             onEnter={doRegister}
           />
-          {workouts.length > 0 && (
+          {(workouts.length > 0 || routines.length > 0) && (
             <p className="px-1 text-[12px] text-ink-3">
-              {workouts.length}{" "}
-              {workouts.length === 1 ? "allenamento fatto" : "allenamenti fatti"}{" "}
-              da ospite: passano tutti nel nuovo account.
+              {[
+                routines.length > 0
+                  ? `${routines.length} ${routines.length === 1 ? "scheda" : "schede"}`
+                  : null,
+                workouts.length > 0
+                  ? `${workouts.length} ${
+                      workouts.length === 1 ? "allenamento" : "allenamenti"
+                    }`
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" e ")}{" "}
+              da ospite: passano nel nuovo account così come sono.
             </p>
           )}
           <Button variant="primary" disabled={busy} onClick={doRegister}>

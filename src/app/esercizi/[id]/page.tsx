@@ -12,6 +12,7 @@ import { lastSetsFor } from "@/lib/session";
 import { fmtNum, fmtShort } from "@/lib/dates";
 import { Button, Card, Sheet, Tag, toast } from "@/components/ui";
 import { ExMedia } from "@/components/ExMedia";
+import ExerciseCues from "@/components/ExerciseCues";
 import { LineChart } from "@/components/charts";
 import { ROUTINE_ICONS } from "@/components/routineIcons";
 
@@ -161,6 +162,10 @@ export default function EsercizioDetailPage() {
               </div>
             </Card>
           )}
+
+          <Card>
+            <ExerciseCues ex={ex} />
+          </Card>
 
           {steps && steps.length > 0 && (
             <Card>

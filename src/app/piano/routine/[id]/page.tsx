@@ -7,13 +7,16 @@ import {
   ArrowLeft,
   Barbell,
   DotsSixVertical,
+  HouseLine,
   Plus,
   Trash,
+  Warning,
 } from "@phosphor-icons/react";
 import type { ExerciseIndex, ExMode, RoutineExercise } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { detectMode, loadIndex, resolveEx } from "@/lib/data";
 import { tEquip, tTarget } from "@/lib/it";
+import { alternativeFor, equipAllows, EQUIP_SHORT, isEquip, offEquipExercises } from "@/lib/equip";
 import { Button, Card, Chip, Seg, Sheet, toast } from "@/components/ui";
 import Stepper from "@/components/Stepper";
 import ExercisePicker from "@/components/ExercisePicker";
@@ -148,9 +151,11 @@ export default function RoutineEditPage() {
   const reduce = useReducedMotion();
   const routines = useStore((s) => s.routines);
   const custom = useStore((s) => s.custom);
+  const settings = useStore((s) => s.settings);
   const saveRoutine = useStore((s) => s.saveRoutine);
   const deleteRoutine = useStore((s) => s.deleteRoutine);
   const routine = routines.find((r) => r.id === id) ?? null;
+  const equip = isEquip(settings.equip) ? settings.equip : null;
 
   const [index, setIndex] = useState<ExerciseIndex[] | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -171,6 +176,53 @@ export default function RoutineEditPage() {
   }, [routine, saveRoutine]);
 
   const exList = useMemo(() => routine?.exercises ?? [], [routine]);
+
+  const offEquip = useMemo(
+    () =>
+      equip && equip !== "palestra" && index
+        ? offEquipExercises(exList.map((e) => e.exId), index, equip)
+        : [],
+    [equip, index, exList]
+  );
+
+  /** Rimpiazza gli esercizi che chiedono attrezzi non disponibili. */
+  const adaptToEquip = () => {
+    if (!routine || !index || !equip || equip === "palestra") return;
+    const used = new Set(routine.exercises.map((e) => e.exId));
+    let swapped = 0;
+    let dropped = 0;
+    const exercises = routine.exercises.flatMap((re) => {
+      const ex = resolveEx(re.exId, index, custom);
+      if (!ex || equipAllows(equip, ex.e)) return [re];
+      const alt = alternativeFor(ex, index, equip, used);
+      if (!alt) {
+        dropped++;
+        return [];
+      }
+      used.add(alt.i);
+      swapped++;
+      const mode = detectMode(alt);
+      return [
+        {
+          ...re,
+          exId: alt.i,
+          mode,
+          sec: mode === "time" ? (re.sec ?? 45) : undefined,
+          min: mode === "cardio" ? (re.min ?? 20) : undefined,
+          speed: mode === "cardio" ? (re.speed ?? 8) : undefined,
+          k: kgen(),
+        },
+      ];
+    });
+    saveRoutine({ ...routine, exercises });
+    toast(
+      swapped
+        ? `${swapped} ${swapped === 1 ? "esercizio sostituito" : "esercizi sostituiti"}${
+            dropped ? ` · ${dropped} rimosso` : ""
+          }`
+        : "Nessuna alternativa trovata: scegli tu il sostituto"
+    );
+  };
 
   if (!routine) {
     return (
@@ -241,6 +293,25 @@ export default function RoutineEditPage() {
             Aggiungi gli esercizi nell'ordine in cui li farai in palestra.
           </p>
         </Card>
+      )}
+
+      {offEquip.length > 0 && equip && (
+        <div className="flex flex-col gap-2.5 rounded-[16px] border border-[rgba(251,191,36,0.3)] bg-amber-soft p-3.5">
+          <div className="flex items-start gap-2 text-[13px] font-semibold leading-snug text-amber">
+            <Warning size={17} weight="fill" className="mt-0.5 shrink-0" />
+            <span>
+              {offEquip.length === 1
+                ? "Un esercizio di questa scheda"
+                : `${offEquip.length} esercizi di questa scheda`}{" "}
+              {offEquip.length === 1 ? "richiede" : "richiedono"} attrezzi che
+              non hai dichiarato ({offEquip.map((e) => tEquip(e.e)).join(", ")}).
+            </span>
+          </div>
+          <Button className="min-h-[40px] text-[13px]" onClick={adaptToEquip}>
+            <HouseLine size={16} weight="bold" />
+            Adatta a {EQUIP_SHORT[equip]}
+          </Button>
+        </div>
       )}
 
       <Reorder.Group

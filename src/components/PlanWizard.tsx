@@ -23,6 +23,9 @@ import type { Equip, Goal, Level, WizardChoices } from "@/lib/plangen";
 import { generatePlan } from "@/lib/plangen";
 import { loadIndex, resolveEx } from "@/lib/data";
 import { useStore } from "@/lib/store";
+import { currentAccount } from "@/lib/auth";
+import { savePlanDraft } from "@/lib/plandraft";
+import { useSignup } from "@/components/SignupPrompt";
 import { toast, Button } from "@/components/ui";
 import { ROUTINE_ICONS } from "@/components/routineIcons";
 
@@ -54,7 +57,7 @@ const DAYS: StepOption<2 | 3 | 4 | 5>[] = [
 
 const EQUIPS: StepOption<Equip>[] = [
   { value: "palestra", label: "Palestra attrezzata", sub: "Bilancieri, macchine, cavi: tutto", icon: <Buildings size={22} weight="bold" /> },
-  { value: "manubri", label: "Manubri a casa", sub: "Coppia di manubri e una panca", icon: <HouseLine size={22} weight="bold" /> },
+  { value: "manubri", label: "Manubri a casa", sub: "Manubri, panca e corpo libero: niente macchine", icon: <HouseLine size={22} weight="bold" /> },
   { value: "corpo", label: "Corpo libero", sub: "Zero attrezzi, al massimo una sbarra", icon: <PersonSimpleTaiChi size={22} weight="bold" /> },
 ];
 
@@ -86,16 +89,32 @@ export default function PlanWizard({
   const choices: WizardChoices | null =
     goal && level && days && equip ? { goal, level, days, equip } : null;
 
-  const plan = useMemo(() => (choices ? generatePlan(choices) : null), [choices]);
+  const plan = useMemo(
+    () => (choices && index ? generatePlan(choices, index) : null),
+    [choices, index]
+  );
 
   const apply = () => {
-    if (!plan) return;
+    if (!plan || !choices) return;
     plan.routines.forEach(saveRoutine);
     plan.week.forEach((rid, i) => assignDay(i, rid));
-    if (choices) setSettings({ goal: choices.goal, level: choices.level });
+    setSettings({ goal: choices.goal, level: choices.level, equip: choices.equip });
     setOnboarded();
+    const account = currentAccount();
+    // la scheda resta anche fuori dall'account: se dopo ci si registra, la ritrova
+    savePlanDraft({
+      fromId: account?.id ?? null,
+      routines: plan.routines,
+      week: plan.week,
+      goal: choices.goal,
+      level: choices.level,
+      equip: choices.equip,
+    });
     toast("Piano pronto: si comincia");
     onApplied?.();
+    if (account?.guest) {
+      setTimeout(() => useSignup.getState().show("plan"), 900);
+    }
   };
 
   const options =
@@ -202,6 +221,13 @@ export default function PlanWizard({
             className="flex flex-col gap-3"
           >
             <h1 className="display text-[26px]">Il tuo piano</h1>
+            {!plan && (
+              <div className="flex flex-col gap-2">
+                <div className="skeleton h-14 w-full" />
+                <div className="skeleton h-28 w-full" />
+                <div className="skeleton h-28 w-full" />
+              </div>
+            )}
             {plan && (
               <>
                 <div className="flex items-start gap-2.5 rounded-[14px] border border-line bg-surface-2 px-3.5 py-3 text-[13px] leading-relaxed text-ink-2">

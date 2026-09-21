@@ -1,5 +1,5 @@
 import type { RoutineExercise } from "./types";
-import type { Equip } from "./plangen";
+import type { Equip } from "./equip";
 
 interface QuickPlan {
   name: string;
@@ -7,7 +7,7 @@ interface QuickPlan {
   note: string;
 }
 
-const ORDER: { id: Record<Equip, string>; compound: boolean }[] = [
+const ORDER: { id: Record<Equip, string>; compound: boolean; timed?: boolean }[] = [
   { id: { palestra: "0043", manubri: "1760", corpo: "1685" }, compound: true },
   { id: { palestra: "0025", manubri: "0289", corpo: "0662" }, compound: true },
   { id: { palestra: "0861", manubri: "0293", corpo: "0499" }, compound: true },
@@ -15,7 +15,7 @@ const ORDER: { id: Record<Equip, string>; compound: boolean }[] = [
   { id: { palestra: "0405", manubri: "0426", corpo: "0259" }, compound: true },
   { id: { palestra: "0334", manubri: "0334", corpo: "3470" }, compound: false },
   { id: { palestra: "0201", manubri: "0294", corpo: "0129" }, compound: false },
-  { id: { palestra: "2135", manubri: "2135", corpo: "2135" }, compound: false },
+  { id: { palestra: "2135", manubri: "0464", corpo: "0464" }, compound: false, timed: true },
 ];
 
 const SET_SECONDS = 42;
@@ -31,7 +31,7 @@ export function generateQuickWorkout(minutes: number, equip: Equip): QuickPlan {
   for (const slot of ORDER) {
     const rest = slot.compound ? restCompound : restIso;
     const exId = slot.id[equip];
-    if (exId === "2135") {
+    if (slot.timed) {
       const cost = sets * (40 + restIso);
       if (budget < cost) break;
       budget -= cost;

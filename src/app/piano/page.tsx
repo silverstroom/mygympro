@@ -9,10 +9,16 @@ import {
   Lightning,
   MoonStars,
   Plus,
+  Warning,
 } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 import { DAY_FULL } from "@/lib/dates";
 import { STARTER_PPL, STARTER_WEEK } from "@/lib/starter";
+import { loadIndex } from "@/lib/data";
+import type { ExerciseIndex } from "@/lib/types";
+import { EQUIP_SHORT, isEquip, offEquipExercises } from "@/lib/equip";
+import { generatePlan } from "@/lib/plangen";
+import type { Goal, Level } from "@/lib/plangen";
 import { Button, Card, Sheet, toast } from "@/components/ui";
 import { ROUTINE_ICONS } from "@/components/routineIcons";
 import PlanWizard from "@/components/PlanWizard";
@@ -27,8 +33,15 @@ export default function PianoPage() {
   const week = useStore((s) => s.week);
   const assignDay = useStore((s) => s.assignDay);
   const saveRoutine = useStore((s) => s.saveRoutine);
+  const settings = useStore((s) => s.settings);
   const [pickDay, setPickDay] = useState<number | null>(null);
   const [showWizard, setShowWizard] = useState(false);
+  const [index, setIndex] = useState<ExerciseIndex[] | null>(null);
+  const equip = isEquip(settings.equip) ? settings.equip : null;
+
+  useEffect(() => {
+    if (equip && equip !== "palestra") loadIndex().then(setIndex).catch(() => {});
+  }, [equip]);
 
   useEffect(() => {
     if (new URLSearchParams(window.location.search).has("wizard")) {
@@ -43,10 +56,28 @@ export default function PianoPage() {
     router.push(`/piano/routine/${id}`);
   };
 
-  const loadStarter = () => {
-    STARTER_PPL.forEach(saveRoutine);
-    STARTER_WEEK.forEach((r, i) => assignDay(i, r));
-    toast("Piano Push / Pull / Legs caricato");
+  // Il piano pronto segue l'attrezzatura dichiarata: niente macchine a chi sta a casa.
+  const loadStarter = async () => {
+    if (!equip || equip === "palestra") {
+      STARTER_PPL.forEach(saveRoutine);
+      STARTER_WEEK.forEach((r, i) => assignDay(i, r));
+      toast("Piano Push / Pull / Legs caricato");
+      return;
+    }
+    const idx = index ?? (await loadIndex().catch(() => null));
+    if (idx && !index) setIndex(idx);
+    const plan = generatePlan(
+      {
+        goal: (settings.goal as Goal) ?? "salute",
+        level: (settings.level as Level) ?? "principiante",
+        days: 3,
+        equip,
+      },
+      idx
+    );
+    plan.routines.forEach(saveRoutine);
+    plan.week.forEach((rid, i) => assignDay(i, rid));
+    toast(`Piano in tre giorni pronto, tutto con ${EQUIP_SHORT[equip]}`);
   };
 
   if (showWizard) {
@@ -125,7 +156,7 @@ export default function PianoPage() {
             <div className="flex gap-2">
               <Button onClick={loadStarter} className="flex-1">
                 <Lightning size={17} weight="fill" />
-                PPL pronto
+                {equip && equip !== "palestra" ? "Piano pronto" : "PPL pronto"}
               </Button>
               <Button onClick={newRoutine} className="flex-1">
                 <Plus size={17} weight="bold" />
@@ -143,6 +174,10 @@ export default function PianoPage() {
             .map((rid, di) => (rid === r.id ? DAY_FULL[di].slice(0, 3) : null))
             .filter(Boolean)
             .join(" · ");
+          const off =
+            equip && equip !== "palestra" && index
+              ? offEquipExercises(r.exercises.map((e) => e.exId), index, equip)
+              : [];
           return (
             <div
               key={r.id}
@@ -164,6 +199,15 @@ export default function PianoPage() {
                   </div>
                   <CaretRight size={17} color="var(--text-3)" />
                 </div>
+                {off.length > 0 && (
+                  <div className="mt-2.5 flex items-start gap-2 rounded-[12px] border border-[rgba(251,191,36,0.3)] bg-amber-soft px-3 py-2 text-[12px] font-medium leading-snug text-amber">
+                    <Warning size={15} weight="fill" className="mt-0.5 shrink-0" />
+                    {off.length === 1
+                      ? "1 esercizio chiede attrezzi che non hai"
+                      : `${off.length} esercizi chiedono attrezzi che non hai`}
+                    : apri la scheda e adattala.
+                  </div>
+                )}
               </Card>
             </div>
           );

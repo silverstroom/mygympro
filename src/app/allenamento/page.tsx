@@ -14,6 +14,7 @@ import {
   Minus,
   Play,
   Plus,
+  Prohibit,
   Shuffle,
   TrendDown,
   TrendUp,
@@ -22,23 +23,28 @@ import {
 } from "@phosphor-icons/react";
 import type { ExerciseIndex, SessionEntry, SetLog } from "@/lib/types";
 import { useStore } from "@/lib/store";
-import { loadIndex, loadSteps, resolveEx, detectMode } from "@/lib/data";
+import { loadIndex, loadSteps, resolveEx, detectMode, isBodyweight } from "@/lib/data";
 import { tEquip, tTarget } from "@/lib/it";
-import { bestSetFor, muscleUsage } from "@/lib/calc";
+import { bestSetFor, e1rm, muscleUsage } from "@/lib/calc";
 import { lastSetsFor, buildEntry, effectiveRoutineId } from "@/lib/session";
 import { fmtNum, fmtShort, todayISO, DAY_FULL, dayIdxOf } from "@/lib/dates";
 import { beep, vibrate } from "@/lib/sound";
 import { acquireWakeLock, releaseWakeLock } from "@/lib/wakelock";
 import { useStartSession } from "@/lib/useStartSession";
 import { generateQuickWorkout } from "@/lib/quickwo";
-import type { Equip } from "@/lib/plangen";
+import type { Equip } from "@/lib/equip";
+import { isEquip } from "@/lib/equip";
 import { buildInsights } from "@/lib/insights";
-import { hypeForPR, hypeForSet, hypeForVolume, shouldHypeSet } from "@/lib/hype";
+import { encourageSet, hypeForPR, hypeForVolume } from "@/lib/hype";
 import { buildSessionEntries } from "@/lib/session";
 import { isGuest, GUEST_WO_LIMIT } from "@/lib/guest";
 import { useSignup } from "@/components/SignupPrompt";
 import { Button, Card, Seg, Sheet, Tag, toast } from "@/components/ui";
 import Stepper from "@/components/Stepper";
+import NumberInput from "@/components/NumberInput";
+import HypeBubble, { hypeSay, useHype } from "@/components/HypeBubble";
+import ExerciseCues from "@/components/ExerciseCues";
+import { cuesFor } from "@/lib/cues";
 import { ExMedia } from "@/components/ExMedia";
 import ExercisePicker from "@/components/ExercisePicker";
 import Confetti from "@/components/Confetti";
@@ -74,12 +80,14 @@ function SetField({
   step,
   decimal = false,
   disabled = false,
+  label,
 }: {
   value: number;
   onChange: (v: number) => void;
   step: number;
   decimal?: boolean;
   disabled?: boolean;
+  label?: string;
 }) {
   return (
     <div
@@ -95,16 +103,14 @@ function SetField({
       >
         <Minus size={13} weight="bold" />
       </button>
-      <input
-        type="number"
-        inputMode={decimal ? "decimal" : "numeric"}
-        value={Number.isFinite(value) ? value : ""}
+      <NumberInput
+        value={value}
+        onChange={onChange}
+        min={0}
+        max={999}
+        decimal={decimal}
         disabled={disabled}
-        onChange={(e) => {
-          const v = parseFloat(e.target.value.replace(",", "."));
-          onChange(Number.isFinite(v) ? v : 0);
-        }}
-        onFocus={(e) => e.target.select()}
+        ariaLabel={label}
         className="tnum w-full min-w-0 bg-transparent text-center text-[16px] font-bold outline-none"
       />
       <button
@@ -125,8 +131,13 @@ function QuickCard() {
   const exWeights = useStore((s) => s.exWeights);
   const custom = useStore((s) => s.custom);
   const startSession = useStore((s) => s.startSession);
+  const savedEquip = useStore((s) => s.settings.equip);
   const [minutes, setMinutes] = useState<15 | 30 | 45>(30);
-  const [equip, setEquip] = useState<Equip>("palestra");
+  const [equip, setEquip] = useState<Equip>(isEquip(savedEquip) ? savedEquip : "palestra");
+
+  useEffect(() => {
+    if (isEquip(savedEquip)) setEquip(savedEquip);
+  }, [savedEquip]);
 
   const go = async () => {
     if (isGuest() && workouts.length >= GUEST_WO_LIMIT) {
@@ -549,17 +560,21 @@ function InfoSheet({ ex, open, onClose }: { ex: ExerciseIndex | null; open: bool
             </div>
           )}
           {steps && steps.length > 0 && (
-            <ol className="flex flex-col gap-2.5">
-              {steps.map((s, i) => (
-                <li key={i} className="flex gap-3 text-[14px] leading-relaxed text-ink-2">
-                  <span className="tnum mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface-2 text-[12px] font-bold text-accent">
-                    {i + 1}
-                  </span>
-                  {s}
-                </li>
-              ))}
-            </ol>
+            <div>
+              <h2 className="display mb-2.5 text-[15px] text-ink-2">Esecuzione</h2>
+              <ol className="flex flex-col gap-2.5">
+                {steps.map((s, i) => (
+                  <li key={i} className="flex gap-3 text-[14px] leading-relaxed text-ink-2">
+                    <span className="tnum mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface-2 text-[12px] font-bold text-accent">
+                      {i + 1}
+                    </span>
+                    {s}
+                  </li>
+                ))}
+              </ol>
+            </div>
           )}
+          <ExerciseCues ex={ex} />
           <div className="text-[11px] text-ink-3">
             Media: © Gym visual · gymvisual.com
           </div>
@@ -605,6 +620,12 @@ function ActiveWorkout() {
   useEffect(() => {
     loadIndex().then(setIndex).catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (confirmFinish || confirmDiscard || pickerOpen || weighOpen || infoEx || timed) {
+      useHype.getState().clear();
+    }
+  }, [confirmFinish, confirmDiscard, pickerOpen, weighOpen, infoEx, timed]);
 
   useEffect(() => {
     if (settings.wakeLock) acquireWakeLock();
@@ -675,19 +696,47 @@ function ActiveWorkout() {
       beep(settings.sound, 1040, 0.1);
       vibrate(28);
       const doneSet = nowActive.entries[cur].sets[si];
-      if (
-        entry.mode === "reps" &&
-        doneSet.w != null &&
-        shouldHypeSet(doneSet.w, doneSet.r ?? 0)
-      ) {
-        const line = hypeForSet(doneSet.w);
-        if (line) coachSay(line);
-      }
+      const curEntry = nowActive.entries[cur];
       const totalNow = nowActive.entries.reduce((n, e) => n + e.sets.length, 0);
       const doneNow = nowActive.entries.reduce(
         (n, e) => n + e.sets.filter((x) => x.done).length,
         0
       );
+      // ogni serie chiusa si prende il suo fumetto: niente estrazione a sorte
+      if (doneNow < totalNow) {
+        const w = doneSet.w ?? 0;
+        const r = doneSet.r ?? 0;
+        const isPR =
+          entry.mode === "reps" && w > 0 && r > 0 && e1rm(w, r) > (best?.e1rm ?? 0);
+        const lastTop = last
+          ? last.sets.reduce((m, x) => Math.max(m, x.w ?? 0), 0)
+          : 0;
+        const lastReps = last
+          ? last.sets.reduce((m, x) => Math.max(m, x.r ?? 0), 0)
+          : 0;
+        const beatLast =
+          !isPR &&
+          entry.mode === "reps" &&
+          !!last &&
+          ((w > 0 && lastTop > 0 && w > lastTop) ||
+            (w > 0 && w === lastTop && r > lastReps));
+        const line = encourageSet({
+          mode: entry.mode,
+          weight: doneSet.w,
+          reps: doneSet.r,
+          sec: doneSet.sec,
+          min: doneSet.min,
+          setIdx: si,
+          setCount: curEntry.sets.length,
+          doneSets: doneNow,
+          totalSets: totalNow,
+          lastOfExercise: curEntry.sets.every((x) => x.done),
+          bodyweight: ex ? isBodyweight(ex) : false,
+          isPR,
+          beatLast,
+        });
+        hypeSay(line.text, line.tone);
+      }
       if (doneNow >= totalNow) {
         stopRest();
         setConfirmFinish(true);
@@ -830,6 +879,24 @@ function ActiveWorkout() {
                 )}
               </div>
 
+              {ex && (() => {
+                const warn = cuesFor(ex).avoid[0];
+                return warn ? (
+                  <button
+                    onClick={() => setInfoEx(ex)}
+                    className="press flex items-start gap-2.5 rounded-[13px] border border-[rgba(248,113,113,0.28)] bg-red-soft px-3.5 py-2.5 text-left text-[13px] font-medium leading-snug text-ink-2"
+                  >
+                    <Prohibit size={17} weight="bold" className="mt-0.5 shrink-0" color="var(--red)" />
+                    <span>
+                      {warn}{" "}
+                      <span className="whitespace-nowrap font-bold text-accent">
+                        Altre accortezze
+                      </span>
+                    </span>
+                  </button>
+                ) : null;
+              })()}
+
               {last && (
                 <div className="text-[12.5px] text-ink-3">
                   L'ultima volta ({fmtShort(last.d)}):{" "}
@@ -936,6 +1003,7 @@ function ActiveWorkout() {
                             onChange={(v) => setField(cur, si, "min", v)}
                             step={1}
                             disabled={s.done}
+                            label={`Minuti serie ${si + 1}`}
                           />
                           <SetField
                             value={s.speed ?? 0}
@@ -943,6 +1011,7 @@ function ActiveWorkout() {
                             step={0.5}
                             decimal
                             disabled={s.done}
+                            label={`Velocità serie ${si + 1}`}
                           />
                         </>
                       ) : entry.mode === "time" ? (
@@ -953,6 +1022,7 @@ function ActiveWorkout() {
                               onChange={(v) => setField(cur, si, "sec", v)}
                               step={5}
                               disabled={s.done}
+                              label={`Secondi serie ${si + 1}`}
                             />
                             <button
                               aria-label="Avvia timer serie"
@@ -971,6 +1041,7 @@ function ActiveWorkout() {
                             step={2.5}
                             decimal
                             disabled={s.done}
+                            label={`Zavorra serie ${si + 1}`}
                           />
                         </>
                       ) : (
@@ -982,6 +1053,7 @@ function ActiveWorkout() {
                               step={2.5}
                               decimal
                               disabled={s.done}
+                              label={`Kg serie ${si + 1}`}
                             />
                           ) : (
                             <button
@@ -996,6 +1068,7 @@ function ActiveWorkout() {
                             onChange={(v) => setField(cur, si, "r", v)}
                             step={1}
                             disabled={s.done}
+                            label={`Ripetizioni serie ${si + 1}`}
                           />
                         </>
                       )}
@@ -1172,6 +1245,8 @@ function ActiveWorkout() {
           </Button>
         </div>
       </Sheet>
+
+      <HypeBubble raised={!!active.restUntil} />
 
       <Sheet open={weighOpen} onClose={() => setWeighOpen(false)} title="Peso di oggi">
         <div className="flex flex-col gap-4 pb-2">

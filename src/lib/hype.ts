@@ -84,7 +84,139 @@ export function hypeForPR(): string {
   return pick(PR_LINES);
 }
 
-export function shouldHypeSet(weight: number, reps: number): boolean {
-  if (weight * reps < 350 && weight < 70) return false;
-  return Math.random() < 0.35;
+
+export type HypeTone = "ok" | "fire" | "pr";
+
+export interface SetContext {
+  mode: "reps" | "time" | "cardio";
+  weight?: number | null;
+  reps?: number | null;
+  sec?: number | null;
+  min?: number | null;
+  setIdx: number;
+  setCount: number;
+  doneSets: number;
+  totalSets: number;
+  lastOfExercise: boolean;
+  /** esercizio davvero a corpo libero, non un bilanciere lasciato a zero */
+  bodyweight?: boolean;
+  isPR?: boolean;
+  beatLast?: boolean;
+}
+
+export interface HypeLine {
+  text: string;
+  tone: HypeTone;
+}
+
+const PR_SET_LINES = [
+  "Record personale, qui e ora: te lo sei preso.",
+  "Mai sollevato tanto: il vecchio te guarda da lontano.",
+  "Nuovo massimale in cassaforte. Hulk prende appunti.",
+];
+
+const BEAT_LAST_LINES = [
+  "Meglio dell'ultima volta: la progressione è tutta qui.",
+  "Un gradino sopra la scorsa sessione. Continua così.",
+  "Hai battuto il te stesso di sette giorni fa.",
+];
+
+const CLOSE_EXERCISE_LINES = [
+  "Esercizio chiuso, tutte le serie in cascina.",
+  "Ultima serie di questo esercizio: fatta.",
+  "Esercizio archiviato. Si passa al prossimo.",
+];
+
+const REPS_LINES = [
+  "Serie a segno.",
+  "Bella lì: una in meno da fare.",
+  "Fatta. Respira e riparti.",
+  "Pulita. Il conto sale.",
+  "Serie chiusa senza sconti.",
+  "Ottimo controllo: avanti così.",
+  "Questa è entrata bene.",
+  "Un'altra messa via.",
+];
+
+const BODYWEIGHT_LINES = [
+  "Nessun bilanciere: solo tu contro la gravità. Vinci tu.",
+  "Il corpo è il tuo carico, e lo stai spostando bene.",
+  "Zero attrezzi, zero alibi: serie fatta.",
+];
+
+const TIME_LINES = [
+  "Tenuta finita: il core se n'è accorto.",
+  "Secondi resistiti fino in fondo.",
+  "Isometria chiusa senza mollare.",
+];
+
+const CARDIO_LINES = [
+  "Minuti messi nelle gambe.",
+  "Motore acceso: il fiato ringrazia.",
+  "Cardio fatto, non rimandato.",
+];
+
+const HALFWAY_LINES = [
+  "Metà workout: da qui è tutta discesa.",
+  "Sei a metà strada, e la parte difficile è passata.",
+];
+
+const NEAR_END_LINES = [
+  "Ci siamo quasi: resta poco.",
+  "Ultimo tratto: non mollare adesso.",
+];
+
+const recent: string[] = [];
+
+function pickFresh(arr: string[]): string {
+  const free = arr.filter((x) => !recent.includes(x));
+  const line = pick(free.length ? free : arr);
+  recent.push(line);
+  if (recent.length > 8) recent.shift();
+  return line;
+}
+
+/** Frase di incoraggiamento per la serie appena spuntata. Non torna mai vuota. */
+export function encourageSet(ctx: SetContext): HypeLine {
+  if (ctx.isPR) return { text: pickFresh(PR_SET_LINES), tone: "pr" };
+  if (ctx.beatLast) return { text: pickFresh(BEAT_LAST_LINES), tone: "pr" };
+
+  const w = ctx.weight ?? 0;
+  if (ctx.mode === "reps" && w >= 60) {
+    const heavy = hypeForSet(w);
+    if (heavy) return { text: heavy, tone: "fire" };
+  }
+
+  if (ctx.lastOfExercise) return { text: pickFresh(CLOSE_EXERCISE_LINES), tone: "fire" };
+
+  const left = Math.max(0, ctx.totalSets - ctx.doneSets);
+  if (ctx.totalSets >= 6) {
+    const frac = ctx.doneSets / ctx.totalSets;
+    if (frac >= 0.45 && frac <= 0.55) {
+      return { text: pickFresh(HALFWAY_LINES), tone: "fire" };
+    }
+    if (left > 0 && left <= 2) {
+      return { text: pickFresh(NEAR_END_LINES), tone: "fire" };
+    }
+  }
+
+  if (ctx.mode === "time") return { text: pickFresh(TIME_LINES), tone: "ok" };
+  if (ctx.mode === "cardio") return { text: pickFresh(CARDIO_LINES), tone: "ok" };
+  if (ctx.bodyweight && w <= 0 && (ctx.reps ?? 0) >= 8) {
+    return { text: pickFresh(BODYWEIGHT_LINES), tone: "ok" };
+  }
+
+  const base = pickFresh(REPS_LINES);
+  const tail =
+    left > 0
+      ? left === 1
+        ? " Ne resta una."
+        : ` Ne restano ${left}.`
+      : "";
+  return { text: base + tail, tone: "ok" };
+}
+
+/** Usata nei test: azzera la memoria anti-ripetizione. */
+export function resetHypeMemory() {
+  recent.length = 0;
 }

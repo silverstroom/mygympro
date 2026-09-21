@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import {
+  Barbell,
   Cake,
   Camera,
   CaretRight,
@@ -21,6 +22,7 @@ import {
 } from "@phosphor-icons/react";
 import { exportJSON, importJSON, useStore } from "@/lib/store";
 import { buildDemoState } from "@/lib/demo";
+import { EQUIP_LABEL } from "@/lib/equip";
 import type { Account } from "@/lib/auth";
 import {
   backupInfo,
@@ -418,6 +420,34 @@ export default function ImpostazioniPage() {
               );
             })}
           </div>
+        </div>
+        <div className="mt-3 border-t border-line pt-3">
+          <div className="mb-2 flex items-center gap-2 text-[13.5px] font-semibold text-ink-2">
+            <Barbell size={16} weight="bold" color="var(--text-3)" />
+            Dove ti alleni
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {(["palestra", "manubri", "corpo"] as const).map((k) => {
+              const on = settings.equip === k;
+              return (
+                <button
+                  key={k}
+                  onClick={() => setSettings({ equip: k })}
+                  className={`press rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors ${
+                    on
+                      ? "border-accent bg-accent-soft text-accent"
+                      : "border-line bg-surface-2 text-ink-2"
+                  }`}
+                >
+                  {EQUIP_LABEL[k]}
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-2 text-[12px] leading-snug text-ink-3">
+            Decide quali esercizi entrano nelle schede generate, nella sessione
+            lampo e nei consigli del coach.
+          </p>
         </div>
         {profileKcal != null && (
           <p className="mt-3 border-t border-line pt-3 text-[12.5px] leading-snug text-ink-3">

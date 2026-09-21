@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowRight, Barbell, Plus, ShieldStar, Sparkle, X } from "@phosphor-icons/react";
-import type { Account } from "@/lib/auth";
-import { enterAsGuest, legacyDataPresent, listAccounts, login, register, superAdminLogin } from "@/lib/auth";
+import { ArrowRight, Barbell, CheckSquare, Plus, ShieldStar, Sparkle, Square, X } from "@phosphor-icons/react";
+import type { Account, GuestCarry } from "@/lib/auth";
+import { enterAsGuest, guestCarry, legacyDataPresent, listAccounts, login, register, superAdminLogin } from "@/lib/auth";
+import { clearPlanDraft } from "@/lib/plandraft";
 import { Button, Sheet, toast } from "@/components/ui";
 import PasswordInput from "@/components/PasswordInput";
 import PasswordStrength from "@/components/PasswordStrength";
@@ -22,6 +23,8 @@ function enter() {
 export default function AuthScreen() {
   const accounts = useMemo(() => listAccounts().filter((a) => !a.guest), []);
   const legacy = useMemo(() => legacyDataPresent(), []);
+  const carry = useMemo<GuestCarry | null>(() => guestCarry(), []);
+  const [keepGuest, setKeepGuest] = useState(true);
   const [pick, setPick] = useState<Account | null>(null);
   const [pw, setPw] = useState("");
   const [creating, setCreating] = useState(accounts.length === 0);
@@ -51,13 +54,17 @@ export default function AuthScreen() {
       return;
     }
     setBusy(true);
-    const res = await register(name, pw1);
+    const res = await register(name, pw1, {
+      fromGuestId: carry && keepGuest ? carry.id : undefined,
+    });
     setBusy(false);
     if (!res.ok) {
       toast(res.error, "warn");
       return;
     }
-    if (res.migrated) toast("Dati del dispositivo importati nel tuo account");
+    // se ha scelto di non importare, la scheda da ospite non torna dalla finestra
+    if (carry && !keepGuest) clearPlanDraft();
+    if (res.migrated) toast("Scheda e dati da ospite portati nel tuo account");
     try {
       sessionStorage.setItem("mygympro-new-account", "1");
     } catch {}
@@ -152,6 +159,34 @@ export default function AuthScreen() {
           <PasswordInput value={pw1} onChange={setPw1} placeholder="Password (minimo 4 caratteri)" autoComplete="new-password" />
           <PasswordStrength value={pw1} className="px-0.5" />
           <PasswordInput value={pw2} onChange={setPw2} placeholder="Ripeti la password" autoComplete="new-password" onEnter={doRegister} />
+          {carry && (
+            <button
+              onClick={() => setKeepGuest(!keepGuest)}
+              className={`flex items-start gap-2.5 rounded-[12px] border px-3.5 py-2.5 text-left text-[12.5px] font-medium leading-snug transition-colors ${
+                keepGuest
+                  ? "border-accent bg-accent-soft text-accent"
+                  : "border-line bg-surface-2 text-ink-2"
+              }`}
+            >
+              {keepGuest ? (
+                <CheckSquare size={17} weight="fill" className="mt-0.5 shrink-0" />
+              ) : (
+                <Square size={17} weight="bold" className="mt-0.5 shrink-0" />
+              )}
+              <span>
+                Porta nel nuovo account quello che hai fatto da ospite
+                {carry.routines > 0
+                  ? `: ${carry.routines} ${carry.routines === 1 ? "scheda" : "schede"}`
+                  : ""}
+                {carry.workouts > 0
+                  ? `${carry.routines > 0 ? " e" : ":"} ${carry.workouts} ${
+                      carry.workouts === 1 ? "allenamento" : "allenamenti"
+                    }`
+                  : ""}
+                . Niente da rifare da capo.
+              </span>
+            </button>
+          )}
           {firstReal && (
             <div className="flex items-start gap-2 rounded-[12px] bg-amber-soft px-3.5 py-2.5 text-[12.5px] font-medium leading-snug text-amber">
               <ShieldStar size={16} weight="fill" className="mt-0.5 shrink-0" />

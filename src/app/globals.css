@@ -142,6 +142,10 @@ input:focus-visible {
   border-radius: 8px;
 }
 
+.num-field:focus-visible {
+  outline: none;
+}
+
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
   -webkit-appearance: none;
