@@ -1,5 +1,5 @@
 import type { ExerciseIndex, Routine, RoutineExercise } from "./types";
-import { equipAllows, NOT_AN_EXERCISE } from "./equip";
+import { exerciseAllowed, NOT_AN_EXERCISE } from "./equip";
 import type { Equip } from "./equip";
 
 export type Goal = "forza" | "massa" | "dimagrimento" | "salute";
@@ -53,7 +53,6 @@ type Slot =
   | "calves"
   | "cardio";
 
-/** Primo id = variante per chi inizia, ultimo = variante per chi si allena già. */
 const POOL: Record<Equip, Partial<Record<Slot, string[]>>> = {
   palestra: {
     squat: ["1463", "0043"],
@@ -86,23 +85,22 @@ const POOL: Record<Equip, Partial<Record<Slot, string[]>>> = {
     cardio: ["2612"],
   },
   corpo: {
-    squat: ["1685", "0513"],
-    hinge: ["3561", "3523"],
-    pushH: ["3785", "0662"],
+    squat: ["1685", "2368"],
+    hinge: ["3013", "3561", "3645"],
+    pushH: ["0662", "1311"],
     pushV: ["0259", "0471"],
-    pullH: ["3166", "0499"],
-    pullV: ["1326", "0652"],
+    pullH: ["3166", "1772"],
+    pullV: ["3168", "3162"],
     legsIso: ["3470", "1460"],
-    biceps: ["3158", "1326"],
-    triceps: ["0129", "0814"],
-    delts: ["0662", "0471"],
+    biceps: ["3158", "1770"],
+    triceps: ["1771", "0283"],
+    delts: ["0699", "0471"],
     core: ["0274", "0464", "0630"],
-    calves: ["1373"],
+    calves: ["1373", "1387"],
     cardio: ["1160", "0630"],
   },
 };
 
-/** Muscoli bersaglio per slot: serve a trovare un rimpiazzo se il pool non basta. */
 const SLOT_TARGETS: Record<Slot, string[]> = {
   squat: ["quads", "glutes"],
   hinge: ["glutes", "hamstrings"],
@@ -131,10 +129,6 @@ function lookup(index: ExerciseIndex[] | null, id: string): ExerciseIndex | null
   return index.find((e) => e.i === id) ?? null;
 }
 
-/**
- * Scarta gli id che con l'attrezzatura scelta non si possono fare: senza
- * questo controllo una scheda "a corpo libero" finiva piena di macchine.
- */
 function usable(
   index: ExerciseIndex[] | null,
   equip: Equip,
@@ -143,7 +137,7 @@ function usable(
   if (!index) return true;
   const ex = lookup(index, id);
   if (!ex) return false;
-  return equipAllows(equip, ex.e);
+  return exerciseAllowed(equip, ex);
 }
 
 function fallbackFor(
@@ -157,7 +151,7 @@ function fallbackFor(
   const candidates = index.filter(
     (ex) =>
       !used.has(ex.i) &&
-      equipAllows(equip, ex.e) &&
+      exerciseAllowed(equip, ex) &&
       targets.includes(ex.t) &&
       !NOT_AN_EXERCISE.test(ex.n)
   );
@@ -283,7 +277,7 @@ const GOAL_LABEL: Record<Goal, string> = {
 const EQUIP_WHY: Record<Equip, string> = {
   palestra: "Esercizi scelti tra bilancieri, manubri, cavi e macchine.",
   manubri: "Tutto con manubri, panca e corpo libero: niente macchine.",
-  corpo: "Solo corpo libero: nessun attrezzo da palestra, si fa in casa.",
+  corpo: "Solo corpo libero: nessun attrezzo, nemmeno sbarra o panca, si fa ovunque.",
 };
 
 export function generatePlan(

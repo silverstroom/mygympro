@@ -10,11 +10,11 @@ interface QuickPlan {
 const ORDER: { id: Record<Equip, string>; compound: boolean; timed?: boolean }[] = [
   { id: { palestra: "0043", manubri: "1760", corpo: "1685" }, compound: true },
   { id: { palestra: "0025", manubri: "0289", corpo: "0662" }, compound: true },
-  { id: { palestra: "0861", manubri: "0293", corpo: "0499" }, compound: true },
+  { id: { palestra: "0861", manubri: "0293", corpo: "3166" }, compound: true },
   { id: { palestra: "0085", manubri: "1459", corpo: "3561" }, compound: true },
   { id: { palestra: "0405", manubri: "0426", corpo: "0259" }, compound: true },
   { id: { palestra: "0334", manubri: "0334", corpo: "3470" }, compound: false },
-  { id: { palestra: "0201", manubri: "0294", corpo: "0129" }, compound: false },
+  { id: { palestra: "0201", manubri: "0294", corpo: "0283" }, compound: false },
   { id: { palestra: "2135", manubri: "0464", corpo: "0464" }, compound: false, timed: true },
 ];
 

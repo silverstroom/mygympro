@@ -2,10 +2,11 @@ import type { ExerciseIndex } from "./types";
 
 export type Equip = "palestra" | "manubri" | "corpo";
 
-/** Corpo libero vero: il tappetino e al massimo una sbarra. */
 const NO_KIT = ["body weight"] as const;
 
-/** Con i manubri in casa ci stanno anche elastici e palle. */
+const NEEDS_KIT =
+  /\b(bars?|pull[- ]?ups?|chin[- ]?ups?|chins?|dips?|bench(?:es)?|box|rings?|hanging|hang|suspended|suspension|trx|parallel|rope|ball|band|sled|chair|step|machine|cable|kettlebell|dumbbell|plate|wheel|roller|ladder|rack|towel|slide|assisted|elevated|ergometer|bike|hurdle|cone|bosu|tire|inverted|muscle[- ]?ups?|lever|planche|straps?|platform|cage|swiss|medicine|stability|incline|decline|staircase|equipment|support|glute-ham|balance board|skin the cat|elevator|flag|maltese|gorilla|stalder|swing 360|hyperextension)\b/i;
+
 const HOME_KIT = [
   ...NO_KIT,
   "rope",
@@ -21,10 +22,6 @@ const HOME_KIT = [
   "wheel roller",
 ] as const;
 
-/**
- * null = nessun limite (palestra attrezzata). Negli altri casi l'elenco è
- * chiuso: fuori restano macchine, cavi, bilancieri, sled, cyclette.
- */
 export const EQUIP_ALLOWED: Record<Equip, readonly string[] | null> = {
   palestra: null,
   manubri: [...HOME_KIT],
@@ -53,16 +50,15 @@ export function equipAllows(equip: Equip, equipment: string): boolean {
 }
 
 export function exerciseAllowed(equip: Equip, ex: ExerciseIndex): boolean {
-  return equipAllows(equip, ex.e);
+  if (!equipAllows(equip, ex.e)) return false;
+  return equip !== "corpo" || !NEEDS_KIT.test(ex.n);
 }
 
-/** Solo gli esercizi compatibili con l'attrezzatura dichiarata. */
 export function filterByEquip(index: ExerciseIndex[], equip: Equip): ExerciseIndex[] {
   if (equip === "palestra") return index;
-  return index.filter((ex) => equipAllows(equip, ex.e));
+  return index.filter((ex) => exerciseAllowed(equip, ex));
 }
 
-/** Elenco di esercizi della scheda che a casa non si possono fare. */
 export function offEquipExercises(
   exIds: string[],
   index: ExerciseIndex[],
@@ -74,41 +70,31 @@ export function offEquipExercises(
   for (const id of exIds) {
     if (id.startsWith("c_")) continue;
     const ex = byId.get(id);
-    if (ex && !equipAllows(equip, ex.e)) out.push(ex);
+    if (ex && !exerciseAllowed(equip, ex)) out.push(ex);
   }
   return out;
 }
 
-/** Roba che non è un esercizio di forza: non deve mai finire in una scheda. */
 export const NOT_AN_EXERCISE =
   /stretch|mobility|circles|warm[- ]?up|foam roll|massage|boxing|hook|jab|uppercut|punch|dance|yoga/i;
 
-/**
- * Equivalenti a corpo libero dei classici da palestra: cercando solo per
- * muscolo bersaglio verrebbero fuori accozzaglie (per i deltoidi il dataset
- * offre boxe e stretching), quindi i cambi più comuni sono scritti a mano.
- */
 const BODYWEIGHT_SWAP: { from: RegExp; to: string[] }[] = [
-  { from: /overhead press|shoulder press|military|upright row|lateral raise|front raise|rear delt|reverse fly/, to: ["0471", "0259", "0662"] },
-  { from: /bench press|chest press|chest fly|pec deck|\bfly\b/, to: ["0662", "3785"] },
-  { from: /pulldown|lat pull|pull-?over/, to: ["1326", "0652"] },
-  { from: /row/, to: ["3166", "0499", "3158"] },
-  { from: /deadlift|good morning|hip thrust|hyperextension|back extension/, to: ["3561", "3523", "3013"] },
-  { from: /leg curl/, to: ["3561", "3013"] },
+  { from: /overhead press|shoulder press|military|upright row|lateral raise|front raise|rear delt|reverse fly/, to: ["0259", "0699", "0471"] },
+  { from: /bench press|chest press|chest fly|pec deck|\bfly\b/, to: ["0662", "1311"] },
+  { from: /pulldown|lat pull|pull-?over/, to: ["3168", "3166"] },
+  { from: /row/, to: ["3166", "1772", "3158"] },
+  { from: /deadlift|good morning|hip thrust|hyperextension|back extension/, to: ["3013", "3561", "3645"] },
+  { from: /leg curl/, to: ["0795", "3013"] },
   { from: /leg extension|leg press|hack squat/, to: ["3470", "1460", "1685"] },
-  { from: /squat/, to: ["1685", "0513", "3470"] },
-  { from: /curl/, to: ["1326", "3158"] },
-  { from: /triceps|pushdown|skull|french|\bdip\b/, to: ["0129", "0814", "0259"] },
-  { from: /calf raise/, to: ["1373"] },
-  { from: /shrug/, to: ["0499", "3166"] },
+  { from: /squat/, to: ["1685", "2368", "3470"] },
+  { from: /curl/, to: ["3158", "1770"] },
+  { from: /triceps|pushdown|skull|french|\bdip\b/, to: ["0283", "1771", "0259"] },
+  { from: /calf raise/, to: ["1373", "1387"] },
+  { from: /shrug/, to: ["3166", "1772"] },
   { from: /crunch|sit-?up|plank|twist|leg raise/, to: ["0274", "0464", "0687"] },
   { from: /bike|cycle|treadmill|elliptical|stepmill|ergometer|skierg|run|rowing/, to: ["1160", "0630"] },
 ];
 
-/**
- * Sostituto per un esercizio che con l'attrezzatura dichiarata non si può
- * fare: stesso muscolo bersaglio, stessa zona, attrezzo disponibile.
- */
 export function alternativeFor(
   ex: ExerciseIndex,
   index: ExerciseIndex[],
@@ -119,7 +105,7 @@ export function alternativeFor(
     (c) =>
       c.i !== ex.i &&
       !used.has(c.i) &&
-      equipAllows(equip, c.e) &&
+      exerciseAllowed(equip, c) &&
       !NOT_AN_EXERCISE.test(c.n)
   );
 

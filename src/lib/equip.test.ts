@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ExerciseIndex } from "./types";
-import { alternativeFor, equipAllows, filterByEquip, offEquipExercises } from "./equip";
+import { alternativeFor, equipAllows, exerciseAllowed, filterByEquip, offEquipExercises } from "./equip";
 
 const ex = (i: string, n: string, e: string, t: string, b: string): ExerciseIndex => ({
   i,
@@ -20,7 +20,25 @@ const INDEX = [
   ex("0198", "cable pulldown", "cable", "lats", "back"),
   ex("1326", "chin-up", "body weight", "lats", "back"),
   ex("0294", "dumbbell biceps curl", "dumbbell", "biceps", "upper arms"),
+  ex("3168", "bodyweight squatting row", "body weight", "upper back", "back"),
+  ex("0129", "bench dip (knees bent)", "body weight", "triceps", "upper arms"),
+  ex("0677", "ring dips", "body weight", "triceps", "upper arms"),
+  ex("0662", "push-up", "body weight", "pectorals", "chest"),
 ];
+
+describe("exerciseAllowed", () => {
+  it("a corpo libero niente sbarra, panca o anelli anche se il dataset dice body weight", () => {
+    expect(exerciseAllowed("corpo", INDEX[5])).toBe(false);
+    expect(exerciseAllowed("corpo", INDEX[8])).toBe(false);
+    expect(exerciseAllowed("corpo", INDEX[9])).toBe(false);
+    expect(exerciseAllowed("corpo", INDEX[10])).toBe(true);
+    expect(exerciseAllowed("corpo", INDEX[7])).toBe(true);
+  });
+  it("con i manubri la sbarra e la panca restano disponibili", () => {
+    expect(exerciseAllowed("manubri", INDEX[5])).toBe(true);
+    expect(exerciseAllowed("manubri", INDEX[8])).toBe(true);
+  });
+});
 
 describe("equipAllows", () => {
   it("in palestra passa tutto", () => {
@@ -58,15 +76,18 @@ describe("equipAllows", () => {
 
 describe("filterByEquip", () => {
   it("toglie dalla libreria quello che non puoi usare", () => {
-    expect(filterByEquip(INDEX, "corpo").every((e) => e.e === "body weight")).toBe(true);
+    const corpo = filterByEquip(INDEX, "corpo");
+    expect(corpo.every((e) => e.e === "body weight")).toBe(true);
+    expect(corpo.map((e) => e.i)).not.toContain("1326");
+    expect(corpo.map((e) => e.i)).not.toContain("0129");
     expect(filterByEquip(INDEX, "palestra")).toHaveLength(INDEX.length);
   });
 });
 
 describe("offEquipExercises", () => {
   it("elenca gli esercizi di una scheda che a casa non si fanno", () => {
-    const off = offEquipExercises(["0043", "1685", "0198"], INDEX, "corpo");
-    expect(off.map((e) => e.i)).toEqual(["0043", "0198"]);
+    const off = offEquipExercises(["0043", "1685", "0198", "1326"], INDEX, "corpo");
+    expect(off.map((e) => e.i)).toEqual(["0043", "0198", "1326"]);
   });
   it("in palestra non segnala nulla", () => {
     expect(offEquipExercises(["0043", "0198"], INDEX, "palestra")).toHaveLength(0);
@@ -74,16 +95,16 @@ describe("offEquipExercises", () => {
 });
 
 describe("alternativeFor", () => {
-  it("sostituisce la lat machine con le trazioni alla sbarra", () => {
+  it("sostituisce la lat machine con un rematore a corpo libero, mai con le trazioni", () => {
     const alt = alternativeFor(INDEX[4], INDEX, "corpo");
-    expect(alt?.i).toBe("1326");
+    expect(alt?.i).toBe("3168");
   });
   it("sostituisce lo squat con bilanciere con un equivalente a corpo libero", () => {
     const alt = alternativeFor(INDEX[0], INDEX, "corpo");
     expect(alt && ["1685", "3470"]).toContain(alt?.i);
   });
   it("non ripropone un esercizio già usato", () => {
-    const alt = alternativeFor(INDEX[4], INDEX, "corpo", new Set(["1326"]));
+    const alt = alternativeFor(INDEX[4], INDEX, "corpo", new Set(["3168"]));
     expect(alt).toBeNull();
   });
 

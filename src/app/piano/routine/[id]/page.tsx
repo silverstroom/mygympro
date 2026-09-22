@@ -16,7 +16,7 @@ import type { ExerciseIndex, ExMode, RoutineExercise } from "@/lib/types";
 import { useStore } from "@/lib/store";
 import { detectMode, loadIndex, resolveEx } from "@/lib/data";
 import { tEquip, tTarget } from "@/lib/it";
-import { alternativeFor, equipAllows, EQUIP_SHORT, isEquip, offEquipExercises } from "@/lib/equip";
+import { alternativeFor, exerciseAllowed, EQUIP_SHORT, isEquip, offEquipExercises } from "@/lib/equip";
 import { Button, Card, Chip, Seg, Sheet, toast } from "@/components/ui";
 import Stepper from "@/components/Stepper";
 import ExercisePicker from "@/components/ExercisePicker";
@@ -193,7 +193,7 @@ export default function RoutineEditPage() {
     let dropped = 0;
     const exercises = routine.exercises.flatMap((re) => {
       const ex = resolveEx(re.exId, index, custom);
-      if (!ex || equipAllows(equip, ex.e)) return [re];
+      if (!ex || exerciseAllowed(equip, ex)) return [re];
       const alt = alternativeFor(ex, index, equip, used);
       if (!alt) {
         dropped++;

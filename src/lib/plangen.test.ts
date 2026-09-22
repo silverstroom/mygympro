@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ExerciseIndex } from "./types";
 import { generatePlan } from "./plangen";
-import { equipAllows } from "./equip";
+import { exerciseAllowed } from "./equip";
 
 const ex = (i: string, n: string, e: string, t: string, b = "upper legs"): ExerciseIndex => ({
   i,
@@ -13,7 +13,6 @@ const ex = (i: string, n: string, e: string, t: string, b = "upper legs"): Exerc
   m: "",
 });
 
-/** Indice ridotto ma realistico: corpo libero, manubri e qualche macchina. */
 const INDEX: ExerciseIndex[] = [
   ex("1685", "squat to overhead reach", "body weight", "quads"),
   ex("0513", "jump squat v. 2", "body weight", "glutes"),
@@ -39,7 +38,18 @@ const INDEX: ExerciseIndex[] = [
   ex("1160", "burpee", "body weight", "cardiovascular system", "cardio"),
   ex("2612", "jump rope", "rope", "cardiovascular system", "cardio"),
   ex("0687", "russian twist", "body weight", "abs", "waist"),
-  // manubri
+  ex("3013", "low glute bridge on floor", "body weight", "glutes"),
+  ex("3645", "single leg bridge with outstretched leg", "body weight", "glutes"),
+  ex("2368", "split squats", "body weight", "quads"),
+  ex("1311", "wide hand push up", "body weight", "pectorals", "chest"),
+  ex("1772", "elbow lift - reverse push-up", "body weight", "upper back", "back"),
+  ex("3168", "bodyweight squatting row", "body weight", "upper back", "back"),
+  ex("3162", "bodyweight standing one arm row", "body weight", "upper back", "back"),
+  ex("1770", "biceps leg concentration curl", "body weight", "biceps", "upper arms"),
+  ex("1771", "bodyweight kneeling triceps extension", "body weight", "triceps", "upper arms"),
+  ex("0283", "diamond push-up", "body weight", "triceps", "upper arms"),
+  ex("0699", "shoulder tap push-up", "body weight", "pectorals", "chest"),
+  ex("1387", "one leg floor calf raise", "body weight", "calves", "lower legs"),
   ex("1760", "dumbbell goblet squat", "dumbbell", "quads"),
   ex("0413", "dumbbell squat", "dumbbell", "glutes"),
   ex("1459", "dumbbell romanian deadlift", "dumbbell", "glutes"),
@@ -54,7 +64,6 @@ const INDEX: ExerciseIndex[] = [
   ex("0351", "dumbbell lying triceps extension", "dumbbell", "triceps", "upper arms"),
   ex("0334", "dumbbell lateral raise", "dumbbell", "delts", "shoulders"),
   ex("0409", "dumbbell single leg calf raise", "dumbbell", "calves", "lower legs"),
-  // roba da palestra, non deve finire nelle schede di casa
   ex("1463", "sled 45° leg press", "sled machine", "glutes"),
   ex("0043", "barbell full squat", "barbell", "glutes"),
   ex("0085", "barbell romanian deadlift", "barbell", "glutes"),
@@ -91,8 +100,8 @@ describe("generatePlan e attrezzatura", () => {
               const found = byId.get(e.exId);
               expect(found, `${e.exId} non è nell'indice`).toBeDefined();
               expect(
-                equipAllows("corpo", found!.e),
-                `${found!.n} (${found!.e}) non si fa a casa`
+                exerciseAllowed("corpo", found!),
+                `${found!.n} (${found!.e}) non si fa senza attrezzi`
               ).toBe(true);
             }
         }
@@ -104,7 +113,7 @@ describe("generatePlan e attrezzatura", () => {
       for (const r of plan.routines)
         for (const e of r.exercises) {
           const found = byId.get(e.exId)!;
-          expect(equipAllows("manubri", found.e), `${found.n} (${found.e})`).toBe(true);
+          expect(exerciseAllowed("manubri", found), `${found.n} (${found.e})`).toBe(true);
         }
     }
   });

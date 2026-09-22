@@ -58,7 +58,7 @@ const DAYS: StepOption<2 | 3 | 4 | 5>[] = [
 const EQUIPS: StepOption<Equip>[] = [
   { value: "palestra", label: "Palestra attrezzata", sub: "Bilancieri, macchine, cavi: tutto", icon: <Buildings size={22} weight="bold" /> },
   { value: "manubri", label: "Manubri a casa", sub: "Manubri, panca e corpo libero: niente macchine", icon: <HouseLine size={22} weight="bold" /> },
-  { value: "corpo", label: "Corpo libero", sub: "Zero attrezzi, al massimo una sbarra", icon: <PersonSimpleTaiChi size={22} weight="bold" /> },
+  { value: "corpo", label: "Corpo libero", sub: "Zero attrezzi: né sbarra né panca, solo il tuo corpo", icon: <PersonSimpleTaiChi size={22} weight="bold" /> },
 ];
 
 const STEPS = ["Obiettivo", "Esperienza", "Giorni", "Attrezzatura"] as const;
