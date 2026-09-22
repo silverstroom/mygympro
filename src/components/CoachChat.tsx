@@ -12,6 +12,7 @@ import type { ChatAction, ChatAnswer } from "@/lib/coachchat";
 import { answer } from "@/lib/coachchat";
 import { getIndexSync, loadIndex, loadSteps } from "@/lib/data";
 import { useStore } from "@/lib/store";
+import { displayName } from "@/lib/username";
 import { currentAccount } from "@/lib/auth";
 import { isGuest, GUEST_WO_LIMIT } from "@/lib/guest";
 import { generateQuickWorkout } from "@/lib/quickwo";
@@ -99,10 +100,11 @@ export default function CoachChat() {
 
   useEffect(() => {
     if (open && msgs.length === 0) {
-      const name = currentAccount()?.name ?? "";
+      const acc = currentAccount();
+      const name = displayName(useStore.getState().settings.name, acc?.name, acc?.guest);
       pushMsg({
         role: "coach",
-        text: `Ciao${name && name !== "Ospite" ? ` ${name}` : ""}! Sono il tuo personal trainer virtuale: conosco le tue schede, i tuoi carichi e i tuoi progressi. Chiedimi quello che vuoi, oppure parti da un suggerimento qui sotto.`,
+        text: `Ciao${name ? ` ${name}` : ""}! Sono il tuo personal trainer virtuale: conosco le tue schede, i tuoi carichi e i tuoi progressi. Chiedimi quello che vuoi, oppure parti da un suggerimento qui sotto.`,
       });
     }
   }, [open, msgs.length, pushMsg]);
@@ -170,7 +172,7 @@ export default function CoachChat() {
       goalWeight: s.goalWeight,
       activities: s.activities ?? [],
       settings: s.settings,
-      userName: currentAccount()?.name ?? "",
+      userName: displayName(s.settings.name, currentAccount()?.name, currentAccount()?.guest),
     });
 
     let steps: string[] | undefined;

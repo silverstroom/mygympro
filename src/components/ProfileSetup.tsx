@@ -13,6 +13,7 @@ import {
   IdentificationCard,
   Ruler,
   Scales,
+  UserCircle,
 } from "@phosphor-icons/react";
 import { useStore } from "@/lib/store";
 import { ageFrom, bmr, goalCalories, tdee } from "@/lib/health";
@@ -20,6 +21,8 @@ import { fmtNum } from "@/lib/dates";
 import { Button, Sheet, toast } from "@/components/ui";
 import Stepper from "@/components/Stepper";
 import { coachSay } from "@/components/CoachChat";
+import { currentAccount } from "@/lib/auth";
+import { displayName } from "@/lib/username";
 
 export const useProfileSetup = create<{
   open: boolean;
@@ -31,7 +34,8 @@ export const useProfileSetup = create<{
   hide: () => set({ open: false }),
 }));
 
-const STEPS = ["Sesso", "Età", "Altezza", "Peso"] as const;
+const STEPS = ["Nome", "Sesso", "Età", "Altezza", "Peso"] as const;
+const LAST = STEPS.length - 1;
 
 const SEXES = [
   { value: "m" as const, label: "Uomo", icon: <GenderMale size={22} weight="bold" /> },
@@ -48,6 +52,7 @@ export default function ProfileSetup() {
   const week = useStore((s) => s.week);
 
   const [step, setStep] = useState(0);
+  const [name, setName] = useState("");
   const [sex, setSex] = useState<"m" | "f" | null | undefined>(undefined);
   const [age, setAge] = useState(30);
   const [height, setHeight] = useState(175);
@@ -59,6 +64,8 @@ export default function ProfileSetup() {
     const bw = useStore.getState().bodyweight;
     const year = new Date().getFullYear();
     setStep(0);
+    const acc = currentAccount();
+    setName(displayName(s.name, acc?.name, acc?.guest));
     setSex(s.sex);
     setAge(ageFrom(s.birthYear, year) ?? 30);
     setHeight(s.height != null && s.height >= 120 ? s.height : 175);
@@ -73,6 +80,7 @@ export default function ProfileSetup() {
   const finish = () => {
     const year = new Date().getFullYear();
     setSettings({
+      name: name.trim().slice(0, 30),
       sex: sex === undefined ? null : sex,
       birthYear: year - age,
       height,
@@ -132,6 +140,37 @@ export default function ProfileSetup() {
         >
             {step === 0 && (
               <>
+                <h2 className="display mb-1 text-[24px]">Come vuoi che ti chiami?</h2>
+                <p className="mb-5 text-[13.5px] text-ink-2">
+                  È il nome che vedrai nei saluti e nei consigli del coach.
+                  Puoi cambiarlo quando vuoi dalle impostazioni.
+                </p>
+                <div className="relative">
+                  <UserCircle
+                    size={20}
+                    weight="bold"
+                    color="var(--text-3)"
+                    className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2"
+                  />
+                  <input
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && name.trim().length >= 2) setStep(1);
+                    }}
+                    placeholder="Il tuo nome"
+                    maxLength={30}
+                    autoFocus
+                    autoComplete="off"
+                    autoCapitalize="words"
+                    className="h-12 w-full rounded-[12px] border border-line bg-surface-2 pl-11 pr-4 text-[16px] outline-none transition-colors placeholder:text-ink-3 focus:border-accent"
+                  />
+                </div>
+              </>
+            )}
+
+            {step === 1 && (
+              <>
                 <h2 className="display mb-1 text-[24px]">Come ti descrivi?</h2>
                 <p className="mb-5 text-[13.5px] text-ink-2">
                   Serve solo per calcolare il tuo fabbisogno calorico con la
@@ -145,7 +184,7 @@ export default function ProfileSetup() {
                         key={String(o.value)}
                         onClick={() => {
                           setSex(o.value);
-                          setTimeout(() => setStep(1), 180);
+                          setTimeout(() => setStep(2), 180);
                         }}
                         className={`press flex w-full items-center gap-3.5 rounded-[16px] border p-4 text-left transition-colors ${
                           on
@@ -169,7 +208,7 @@ export default function ProfileSetup() {
               </>
             )}
 
-            {step === 1 && (
+            {step === 2 && (
               <>
                 <h2 className="display mb-1 text-[24px]">Quanti anni hai?</h2>
                 <p className="mb-5 text-[13.5px] text-ink-2">
@@ -181,7 +220,7 @@ export default function ProfileSetup() {
               </>
             )}
 
-            {step === 2 && (
+            {step === 3 && (
               <>
                 <h2 className="display mb-1 text-[24px]">Quanto sei alto?</h2>
                 <p className="mb-5 text-[13.5px] text-ink-2">
@@ -193,7 +232,7 @@ export default function ProfileSetup() {
               </>
             )}
 
-            {step === 3 && (
+            {step === LAST && (
               <>
                 <h2 className="display mb-1 text-[24px]">Quanto pesi oggi?</h2>
                 <p className="mb-5 text-[13.5px] text-ink-2">
@@ -237,14 +276,18 @@ export default function ProfileSetup() {
           </div>
 
         <div className="mt-5 flex flex-col gap-2">
-          {step === 3 ? (
+          {step === LAST ? (
             <Button variant="primary" onClick={finish}>
               <Check size={18} weight="bold" />
               Salva il profilo
             </Button>
           ) : (
-            step > 0 && (
-              <Button variant="primary" onClick={() => setStep(step + 1)}>
+            step !== 1 && (
+              <Button
+                variant="primary"
+                disabled={step === 0 && name.trim().length < 2}
+                onClick={() => setStep(step + 1)}
+              >
                 Avanti
                 <ArrowRight size={17} weight="bold" />
               </Button>

@@ -27,7 +27,7 @@ export interface BgTheme {
 }
 
 export const DEFAULT_ACCENT = "sky";
-export const DEFAULT_BG = "carbone";
+export const DEFAULT_BG = "chiaro";
 
 export const ACCENTS: Record<string, AccentTheme> = {
   sky: {
@@ -114,6 +114,34 @@ const DARK_TEXT = {
 };
 
 export const BGS: Record<string, BgTheme> = {
+  chiaro: {
+    name: "Chiaro",
+    light: true,
+    bg: "#f2f4f7",
+    surface: "#ffffff",
+    surface2: "#eceff3",
+    surface3: "#dfe3e9",
+    text: "#17181d",
+    text2: "#4c4f58",
+    text3: "#878c97",
+    line: "rgba(20, 25, 40, 0.09)",
+    lineStrong: "rgba(20, 25, 40, 0.18)",
+    heat0: "#e2e5ea",
+  },
+  avorio: {
+    name: "Avorio",
+    light: true,
+    bg: "#f6f4ee",
+    surface: "#fffdf7",
+    surface2: "#efece3",
+    surface3: "#e3dfd2",
+    text: "#1c1a15",
+    text2: "#54514a",
+    text3: "#8f8b81",
+    line: "rgba(40, 35, 20, 0.09)",
+    lineStrong: "rgba(40, 35, 20, 0.18)",
+    heat0: "#e6e2d6",
+  },
   carbone: {
     name: "Carbone",
     bg: "#0a0a0c",
@@ -153,34 +181,6 @@ export const BGS: Record<string, BgTheme> = {
     surface2: "#1f161b",
     surface3: "#2a1f25",
     ...DARK_TEXT,
-  },
-  chiaro: {
-    name: "Chiaro",
-    light: true,
-    bg: "#f2f4f7",
-    surface: "#ffffff",
-    surface2: "#eceff3",
-    surface3: "#dfe3e9",
-    text: "#17181d",
-    text2: "#4c4f58",
-    text3: "#878c97",
-    line: "rgba(20, 25, 40, 0.09)",
-    lineStrong: "rgba(20, 25, 40, 0.18)",
-    heat0: "#e2e5ea",
-  },
-  avorio: {
-    name: "Avorio",
-    light: true,
-    bg: "#f6f4ee",
-    surface: "#fffdf7",
-    surface2: "#efece3",
-    surface3: "#e3dfd2",
-    text: "#1c1a15",
-    text2: "#54514a",
-    text3: "#8f8b81",
-    line: "rgba(40, 35, 20, 0.09)",
-    lineStrong: "rgba(40, 35, 20, 0.18)",
-    heat0: "#e6e2d6",
   },
 };
 

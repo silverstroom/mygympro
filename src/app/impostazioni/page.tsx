@@ -13,6 +13,7 @@ import {
   Key,
   Palette,
   Ruler,
+  UserCircle,
   ShieldStar,
   SignOut,
   Sparkle,
@@ -35,6 +36,7 @@ import {
   setAvatar,
 } from "@/lib/auth";
 import { ACCENTS, BGS, DEFAULT_ACCENT, DEFAULT_BG } from "@/lib/themes";
+import { displayName } from "@/lib/username";
 import { ageFrom, bmr, goalCalories, tdee } from "@/lib/health";
 import { fmtNum } from "@/lib/dates";
 import { createAppleParser, parseActivitiesCsv } from "@/lib/importers";
@@ -315,7 +317,9 @@ export default function ImpostazioniPage() {
           />
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
-              <span className="truncate text-[16px] font-bold">{me?.name ?? "..."}</span>
+              <span className="truncate text-[16px] font-bold">
+                {me ? displayName(settings.name, me.name, me.guest) || me.name : "..."}
+              </span>
               {me?.admin && (
                 <span className="flex items-center gap-1 rounded-full bg-amber-soft px-2 py-0.5 text-[10.5px] font-bold text-amber">
                   <ShieldStar size={11} weight="fill" />
@@ -323,7 +327,10 @@ export default function ImpostazioniPage() {
                 </span>
               )}
             </div>
-            <div className="text-[12px] text-ink-3">
+            <div className="truncate text-[12px] text-ink-3">
+              {me && !me.guest && displayName(settings.name, me.name, me.guest) !== me.name
+                ? `Accesso come ${me.name} · `
+                : ""}
               {workouts.length} workout in questo profilo
             </div>
           </div>
@@ -340,6 +347,21 @@ export default function ImpostazioniPage() {
             <SignOut size={15} weight="bold" />
             {me?.guest ? "Accedi" : "Esci"}
           </button>
+        </div>
+        <div className="mt-3 flex items-center justify-between gap-3 border-t border-line pt-3">
+          <span className="flex shrink-0 items-center gap-2 text-[13.5px] font-semibold text-ink-2">
+            <UserCircle size={16} weight="bold" color="var(--text-3)" />
+            Come ti chiami
+          </span>
+          <input
+            value={settings.name ?? ""}
+            onChange={(e) => setSettings({ name: e.target.value.slice(0, 30) })}
+            placeholder="Il tuo nome"
+            maxLength={30}
+            autoComplete="off"
+            autoCapitalize="words"
+            className="h-10 w-[150px] rounded-[10px] border border-line bg-surface-2 px-3 text-right text-[16px] font-semibold outline-none transition-colors placeholder:font-normal placeholder:text-ink-3 focus:border-accent"
+          />
         </div>
         <div className="mt-3 flex items-center justify-between gap-3 border-t border-line pt-3">
           <span className="flex items-center gap-2 text-[13.5px] font-semibold text-ink-2">

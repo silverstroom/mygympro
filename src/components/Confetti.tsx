@@ -10,7 +10,7 @@ function themeColors(): string[] {
     v("--accent", "#38bdf8"),
     v("--accent-strong", "#7dd3fc"),
     "#fbbf24",
-    "#f4f4f5",
+    v("--text", "#17181d"),
     v("--accent-dim", "#0ea5e9"),
   ];
 }

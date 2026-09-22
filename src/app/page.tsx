@@ -40,6 +40,7 @@ import { useSignup } from "@/components/SignupPrompt";
 import { useProfileSetup } from "@/components/ProfileSetup";
 import { ageFrom, bmr, goalCalories, tdee } from "@/lib/health";
 import { currentAccount } from "@/lib/auth";
+import { displayName } from "@/lib/username";
 
 function Onboarding({ accName }: { accName: string }) {
   const setOnboarded = useStore((s) => s.setOnboarded);
@@ -255,8 +256,9 @@ export default function Home() {
   const [dayScope, setDayScope] = useState<"once" | "always">("once");
 
   useEffect(() => {
-    setAccName(currentAccount()?.name ?? "");
-  }, []);
+    const acc = currentAccount();
+    setAccName(displayName(settingsAll.name, acc?.name, acc?.guest));
+  }, [settingsAll.name]);
 
   const today = todayISO();
   const todayRid = effectiveRoutineId({ week, overrides }, today);

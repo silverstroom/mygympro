@@ -20,13 +20,13 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "MyGymPro",
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0a0a0c",
+  themeColor: "#f2f4f7",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,

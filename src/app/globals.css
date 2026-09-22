@@ -1,15 +1,15 @@
 @import "tailwindcss";
 
 :root {
-  --bg: #0a0a0c;
-  --surface: #141417;
-  --surface-2: #1c1c21;
-  --surface-3: #26262c;
-  --line: rgba(255, 255, 255, 0.07);
-  --line-strong: rgba(255, 255, 255, 0.14);
-  --text: #f4f4f5;
-  --text-2: #a6a6af;
-  --text-3: #6e6e78;
+  --bg: #f2f4f7;
+  --surface: #ffffff;
+  --surface-2: #eceff3;
+  --surface-3: #dfe3e9;
+  --line: rgba(20, 25, 40, 0.09);
+  --line-strong: rgba(20, 25, 40, 0.18);
+  --text: #17181d;
+  --text-2: #4c4f58;
+  --text-3: #878c97;
   --accent: #38bdf8;
   --accent-strong: #7dd3fc;
   --accent-dim: #0ea5e9;
@@ -24,11 +24,11 @@
   --accent-glow: rgba(56, 189, 248, 0.35);
   --accent-glow-soft: rgba(56, 189, 248, 0.25);
   --accent-sel: rgba(56, 189, 248, 0.28);
-  --heat-0: #1d1d22;
-  --heat-1: #264c66;
-  --heat-2: #2f688e;
-  --heat-3: #3d8abb;
-  --heat-4: #54b2e8;
+  --heat-0: #e2e5ea;
+  --heat-1: #54b2e8;
+  --heat-2: #3d8abb;
+  --heat-3: #2f688e;
+  --heat-4: #264c66;
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
   --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
@@ -69,7 +69,7 @@
 }
 
 html {
-  color-scheme: dark;
+  color-scheme: light;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
   -webkit-text-size-adjust: 100%;
@@ -88,7 +88,7 @@ body {
 
 ::selection {
   background: var(--accent-sel);
-  color: #f4f4f5;
+  color: var(--text);
 }
 
 * {
