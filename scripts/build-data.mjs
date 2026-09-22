@@ -1,10 +1,35 @@
 import { mkdir, writeFile, stat } from "node:fs/promises";
 import path from "node:path";
 
-const SRC =
-  "https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@main/data/exercises.json";
+const SOURCES = [
+  "https://cdn.jsdelivr.net/gh/hasaneyldrm/exercises-dataset@main/data/exercises.json",
+  "https://raw.githubusercontent.com/hasaneyldrm/exercises-dataset/main/data/exercises.json",
+];
+const ATTEMPTS = 3;
 const outDir = path.join(process.cwd(), "public", "data");
 const exDir = path.join(outDir, "ex");
+
+function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function fetchDataset() {
+  let lastError;
+  for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
+    for (const url of SOURCES) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error("dataset fetch " + res.status + " da " + url);
+        return await res.json();
+      } catch (e) {
+        lastError = e;
+        console.warn(`build-data: tentativo ${attempt} fallito (${e.message})`);
+      }
+    }
+    if (attempt < ATTEMPTS) await sleep(2000 * attempt);
+  }
+  throw lastError;
+}
 
 async function exists(p) {
   try {
@@ -22,9 +47,7 @@ async function main() {
     return;
   }
   console.log("build-data: scarico il dataset...");
-  const res = await fetch(SRC);
-  if (!res.ok) throw new Error("dataset fetch " + res.status);
-  const data = await res.json();
+  const data = await fetchDataset();
 
   await mkdir(exDir, { recursive: true });
 
